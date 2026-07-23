@@ -31,6 +31,12 @@ struct LogMedicationForm: View {
                         Text("No medications found in Health, or access hasn't been granted yet.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        Button("Connect to Apple Health") {
+                            Task {
+                                await healthKit.requestMedicationsAuthorization()
+                                healthMedications = (try? await healthKit.fetchMedications()) ?? []
+                            }
+                        }
                     }
                     ForEach(healthMedications) { medication in
                         VStack(alignment: .leading) {
@@ -95,8 +101,9 @@ struct LogMedicationForm: View {
             .listRowBackground(Color.clear)
         }
         .task {
+            // A silent read, not a permission request — HKUserAnnotatedMedicationQuery always
+            // re-prompts per Apple's docs, so we only trigger that from an explicit tap below.
             if healthKit.supportsMedicationsAPI {
-                await healthKit.requestMedicationsAuthorization()
                 healthMedications = (try? await healthKit.fetchMedications()) ?? []
             }
         }

@@ -31,9 +31,10 @@ struct OnboardingView: View {
     @State private var knowsWeight = false
     @State private var weightLb: Double = 150
     @State private var weightFromHealth = false
-    @State private var hasCheckedHealthWeight = false
     @State private var hydrationTargetML = 2000
     @State private var hasCustomizedTarget = false
+    @State private var isConnectingHealth = false
+    @State private var didAttemptHealthConnect = false
 
     private var suggestedHydrationTargetML: Int {
         // Rough starting point, not a medical recommendation: ~15 mL per lb (~33 mL/kg,
@@ -135,16 +136,13 @@ struct OnboardingView: View {
             if takingMedications {
                 if healthKit.supportsMedicationsAPI {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Add them in the Health app — J-Pouch will show them here automatically. You don't need to re-enter anything.")
+                        Text("Add them in the Health app — J-Pouch will show them here automatically once you connect Health on the next step. You don't need to re-enter anything.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Button("Open Health App") {
                             openURL(URL(string: "x-apple-health://")!)
                         }
                         .buttonStyle(.bordered)
-                    }
-                    .task {
-                        await healthKit.requestMedicationsAuthorization()
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 16) {
@@ -184,8 +182,32 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Hydration Target")
                     .font(.title2.bold())
-                Text("Pouch patients often need more fluid than average. We'll check Health for your weight to suggest a starting point — you can always adjust it later in Settings.")
+                Text("Pouch patients often need more fluid than average. Connect Apple Health and we'll suggest a starting point from your weight\(healthKit.supportsMedicationsAPI ? " — this also lets J-Pouch show medications from Health" : "") — you can always adjust it later in Settings.")
                     .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if healthKit.isAuthorized {
+                Label("Connected to Apple Health", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.subheadline)
+            } else {
+                Button {
+                    connectToHealth()
+                } label: {
+                    if isConnectingHealth {
+                        ProgressView()
+                    } else {
+                        Text("Connect to Apple Health")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(isConnectingHealth)
+            }
+
+            if didAttemptHealthConnect && !weightFromHealth {
+                Text("No weight found in Health — enter yours below.")
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
             }
 
@@ -230,21 +252,23 @@ struct OnboardingView: View {
                 hasCustomizedTarget = true
             }
         }
-        .task {
-            await tryLoadWeightFromHealth()
-        }
     }
 
-    private func tryLoadWeightFromHealth() async {
-        guard !hasCheckedHealthWeight else { return }
-        hasCheckedHealthWeight = true
-
-        await healthKit.requestAuthorization()
-        guard let kg = try? await healthKit.latestBodyMassKG() else { return }
-
-        weightLb = (kg * 2.20462).rounded()
-        weightFromHealth = true
-        knowsWeight = true
+    private func connectToHealth() {
+        isConnectingHealth = true
+        Task {
+            await healthKit.requestAuthorization()
+            if healthKit.supportsMedicationsAPI {
+                await healthKit.requestMedicationsAuthorization()
+            }
+            if let kg = try? await healthKit.latestBodyMassKG() {
+                weightLb = (kg * 2.20462).rounded()
+                weightFromHealth = true
+                knowsWeight = true
+            }
+            didAttemptHealthConnect = true
+            isConnectingHealth = false
+        }
     }
 
     // MARK: - Navigation

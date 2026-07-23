@@ -15,7 +15,6 @@ final class HealthKitManager {
     static let shared = HealthKitManager()
 
     private let store = HKHealthStore()
-    private(set) var isAuthorized = false
 
     private let waterType = HKQuantityType(.dietaryWater)
     private let bodyMassType = HKQuantityType(.bodyMass)
@@ -24,16 +23,20 @@ final class HealthKitManager {
         HKHealthStore.isHealthDataAvailable()
     }
 
+    /// Read fresh from HealthKit every time rather than cached, so it can't go stale if a
+    /// request gets cancelled mid-flight (e.g. the requesting view disappears before the
+    /// system prompt resolves). Water is a share (write) type, so its authorization status
+    /// is one of the few things HealthKit actually reports back to us; read-only types like
+    /// body mass are deliberately kept opaque for privacy, so this is the best signal we have.
+    var isAuthorized: Bool {
+        store.authorizationStatus(for: waterType) == .sharingAuthorized
+    }
+
     func requestAuthorization() async {
         guard isHealthDataAvailable else { return }
         let toShare: Set<HKSampleType> = [waterType]
         let toRead: Set<HKObjectType> = [waterType, bodyMassType]
-        do {
-            try await store.requestAuthorization(toShare: toShare, read: toRead)
-            isAuthorized = true
-        } catch {
-            isAuthorized = false
-        }
+        _ = try? await store.requestAuthorization(toShare: toShare, read: toRead)
     }
 
     /// Writes a water intake sample to HealthKit and returns its sample UUID.

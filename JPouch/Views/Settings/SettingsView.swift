@@ -81,7 +81,12 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     Button("Connect to Apple Health") {
-                        Task { await healthKit.requestAuthorization() }
+                        Task {
+                            await healthKit.requestAuthorization()
+                            if healthKit.supportsMedicationsAPI {
+                                await healthKit.requestMedicationsAuthorization()
+                            }
+                        }
                     }
                 }
                 Section {
