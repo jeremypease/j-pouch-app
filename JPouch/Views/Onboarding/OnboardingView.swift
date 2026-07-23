@@ -136,7 +136,7 @@ struct OnboardingView: View {
             if takingMedications {
                 if healthKit.supportsMedicationsAPI {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Add them in the Health app — J-Pouch will show them here automatically once you connect Health on the next step. You don't need to re-enter anything.")
+                        Text("Add them in the Health app — J-Pouch will show them here automatically once you connect Health on the next step. You'll get a separate prompt there specifically to pick which medications to share, so watch for two prompts, not one. You don't need to re-enter anything.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Button("Open Health App") {

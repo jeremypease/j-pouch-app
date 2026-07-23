@@ -28,10 +28,10 @@ struct LogMedicationForm: View {
             if healthKit.supportsMedicationsAPI {
                 Section {
                     if healthMedications.isEmpty {
-                        Text("No medications found in Health, or access hasn't been granted yet.")
+                        Text("Nothing shared with J-Pouch yet.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Button("Connect to Apple Health") {
+                        Button("Share My Medications with J-Pouch") {
                             Task {
                                 await healthKit.requestMedicationsAuthorization()
                                 healthMedications = (try? await healthKit.fetchMedications()) ?? []
@@ -52,7 +52,7 @@ struct LogMedicationForm: View {
                 } header: {
                     Text("Your Medications")
                 } footer: {
-                    Text("Medications are managed in the Health app. Reminders for anything scheduled there come from Health, not J-Pouch.")
+                    Text("This is separate from the general Health connection in Settings — Apple requires picking which specific medications to share with each app, and always re-asks each time you tap Share. If you've already shared some and don't see them, try tapping Share again and check every medication you want visible here is toggled on.")
                 }
             }
 

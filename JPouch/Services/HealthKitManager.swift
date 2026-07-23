@@ -82,8 +82,11 @@ final class HealthKitManager {
         guard #available(iOS 26.0, *) else { return [] }
         return try await withCheckedThrowingContinuation { continuation in
             var results: [HealthMedication] = []
+            var hasResumed = false
             let query = HKUserAnnotatedMedicationQuery(predicate: nil, limit: HKObjectQueryNoLimit) { _, medication, done, error in
+                guard !hasResumed else { return }
                 if let error {
+                    hasResumed = true
                     continuation.resume(throwing: error)
                     return
                 }
@@ -96,6 +99,7 @@ final class HealthKitManager {
                     ))
                 }
                 if done {
+                    hasResumed = true
                     continuation.resume(returning: results)
                 }
             }

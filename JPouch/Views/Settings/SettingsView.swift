@@ -73,7 +73,7 @@ struct SettingsView: View {
                         step: 250
                     )
                 }
-                Section("Apple Health") {
+                Section {
                     HStack {
                         Text("Status")
                         Spacer()
@@ -87,6 +87,12 @@ struct SettingsView: View {
                                 await healthKit.requestMedicationsAuthorization()
                             }
                         }
+                    }
+                } header: {
+                    Text("Apple Health")
+                } footer: {
+                    if healthKit.supportsMedicationsAPI {
+                        Text("This status is for water and weight syncing only. Medication sharing is a separate Apple permission with no reliable connected/not-connected status — manage it from the Medications section under Log instead.")
                     }
                 }
                 Section {
