@@ -31,6 +31,7 @@ targets:
           - UIInterfaceOrientationPortrait
         NSHealthShareUsageDescription: "J-Pouch reads your water intake and weight from Health to track hydration and spot dehydration trends."
         NSHealthUpdateUsageDescription: "J-Pouch writes the water intake you log to Health so it's saved with the rest of your health data."
+        ITSAppUsesNonExemptEncryption: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jeremypease.jpouch
