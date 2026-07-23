@@ -15,8 +15,15 @@ struct LogOutputForm: View {
 
     var body: some View {
         Form {
-            Section("Consistency") {
+            Section {
                 Stepper("Level \(consistency) of 7", value: $consistency, in: 1...7)
+                Text(PouchConsistency.label(for: consistency))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Consistency")
+            } footer: {
+                Text("Loosely adapted from the Bristol Stool Scale. Pouch output tends to run looser than typical stool, so mid-range is a common baseline.")
             }
             Section("Urgency") {
                 Toggle("Felt urgent", isOn: $hasUrgency)

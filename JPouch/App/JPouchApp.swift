@@ -11,7 +11,7 @@ struct JPouchApp: App {
             FoodEntry.self,
             MedicationEntry.self,
         ])
-        let configuration = ModelConfiguration(schema: schema)
+        let configuration = ModelConfiguration(schema: schema, cloudKitDatabase: .automatic)
         return try! ModelContainer(for: schema, configurations: [configuration])
     }()
 

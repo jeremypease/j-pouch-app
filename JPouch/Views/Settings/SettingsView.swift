@@ -31,7 +31,7 @@ struct SettingsView: View {
                 } footer: {
                     Text("Automatic moves you through stages on its own using the dates below. Pick a stage directly to override it.")
                 }
-                Section("Timeline") {
+                Section {
                     Toggle("Staged surgery date known", isOn: Binding(
                         get: { profile.stagedSurgeryDate != nil },
                         set: { profile.stagedSurgeryDate = $0 ? (profile.stagedSurgeryDate ?? .now) : nil }
@@ -60,6 +60,10 @@ struct SettingsView: View {
                             displayedComponents: .date
                         )
                     }
+                } header: {
+                    Text("Timeline")
+                } footer: {
+                    Text("Takedown is the surgery that closes your temporary ileostomy and reconnects you through the pouch — it's when adaptation actually begins.")
                 }
                 Section("Hydration") {
                     Stepper(

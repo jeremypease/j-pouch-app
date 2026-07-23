@@ -7,7 +7,7 @@ final class UserProfile {
     var manualStageRawValue: String?
     var stagedSurgeryDate: Date?
     var takedownDate: Date?
-    var dailyHydrationTargetML: Int
+    var dailyHydrationTargetML: Int = 2000
 
     var manualStageOverride: Stage? {
         get { manualStageRawValue.flatMap { Stage(rawValue: $0) } }

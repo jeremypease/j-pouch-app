@@ -14,9 +14,9 @@ enum HydrationKind: String, Codable, CaseIterable, Identifiable {
 
 @Model
 final class HydrationEntry {
-    var timestamp: Date
-    var volumeML: Int
-    var kindRawValue: String
+    var timestamp: Date = Date.now
+    var volumeML: Int = 0
+    var kindRawValue: String = HydrationKind.water.rawValue
     /// Set once this entry has been mirrored into HealthKit.
     var healthKitSampleID: String?
 

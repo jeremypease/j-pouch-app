@@ -1,6 +1,15 @@
 import Foundation
 import HealthKit
 
+/// A medication read from the Health app's Medications feature (iOS 26+ only, read-only).
+struct HealthMedication: Identifiable {
+    let id = UUID()
+    let name: String
+    let nickname: String?
+    let isArchived: Bool
+    let hasSchedule: Bool
+}
+
 @Observable
 final class HealthKitManager {
     static let shared = HealthKitManager()
@@ -44,5 +53,47 @@ final class HealthKitManager {
         )
         let samples = try await descriptor.result(for: store)
         return samples.first?.quantity.doubleValue(for: .gramUnit(with: .kilo))
+    }
+
+    // MARK: - Medications (iOS 26+)
+    //
+    // Apple's HealthKit Medications API (HKUserAnnotatedMedication) is read-only for
+    // third-party apps and only available on iOS 26+. Medications themselves are only ever
+    // added or edited in the Health app; J-Pouch just reads and displays them. All
+    // availability checks live here so the rest of the app never needs `#available`.
+
+    var supportsMedicationsAPI: Bool {
+        if #available(iOS 26.0, *) { return true }
+        return false
+    }
+
+    func requestMedicationsAuthorization() async {
+        guard #available(iOS 26.0, *), isHealthDataAvailable else { return }
+        _ = try? await store.requestAuthorization(toShare: [], read: [HKObjectType.userAnnotatedMedicationType()])
+    }
+
+    func fetchMedications() async throws -> [HealthMedication] {
+        guard #available(iOS 26.0, *) else { return [] }
+        return try await withCheckedThrowingContinuation { continuation in
+            var results: [HealthMedication] = []
+            let query = HKUserAnnotatedMedicationQuery(predicate: nil, limit: HKObjectQueryNoLimit) { _, medication, done, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                if let medication {
+                    results.append(HealthMedication(
+                        name: medication.medication.displayText,
+                        nickname: medication.nickname,
+                        isArchived: medication.isArchived,
+                        hasSchedule: medication.hasSchedule
+                    ))
+                }
+                if done {
+                    continuation.resume(returning: results)
+                }
+            }
+            store.execute(query)
+        }
     }
 }

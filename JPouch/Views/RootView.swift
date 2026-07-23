@@ -3,16 +3,12 @@ import SwiftData
 
 struct RootView: View {
     @Query private var profiles: [UserProfile]
-    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         if let profile = profiles.first {
             MainTabView(profile: profile)
         } else {
-            OnboardingView(onComplete: { stage in
-                let profile = UserProfile(stage: stage)
-                modelContext.insert(profile)
-            })
+            OnboardingView()
         }
     }
 }

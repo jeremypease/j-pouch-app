@@ -3,8 +3,8 @@ import SwiftData
 
 @Model
 final class FoodEntry {
-    var timestamp: Date
-    var foodDescription: String
+    var timestamp: Date = Date.now
+    var foodDescription: String = ""
     var photoData: Data?
     var notes: String?
 
