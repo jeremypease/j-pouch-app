@@ -16,6 +16,9 @@ xcuserdata/
 # xcodegen-generated project (regenerate with `xcodegen generate`)
 *.xcodeproj
 
+# Auto-generated when opening the folder directly in Xcode instead of JPouch.xcodeproj
+*.xcworkspace
+
 # Swift Package Manager
 .build/
 .swiftpm/
