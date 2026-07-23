@@ -69,7 +69,10 @@ final class HealthKitManager {
 
     func requestMedicationsAuthorization() async {
         guard #available(iOS 26.0, *), isHealthDataAvailable else { return }
-        _ = try? await store.requestAuthorization(toShare: [], read: [HKObjectType.userAnnotatedMedicationType()])
+        // Medications require per-object authorization (like clinical records / vision
+        // prescriptions) rather than the standard bulk requestAuthorization(toShare:read:) —
+        // the user picks which individual medications to share from a system prompt.
+        _ = try? await store.requestPerObjectReadAuthorization(for: HKObjectType.userAnnotatedMedicationType(), predicate: nil)
     }
 
     func fetchMedications() async throws -> [HealthMedication] {
