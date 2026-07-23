@@ -25,6 +25,7 @@ targets:
       path: JPouch/Resources/Info.plist
       properties:
         CFBundleDisplayName: J-Pouch
+        CFBundleIconName: AppIcon
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
