@@ -30,6 +30,8 @@ struct OnboardingView: View {
     // Hydration
     @State private var knowsWeight = false
     @State private var weightLb: Double = 150
+    @State private var weightFromHealth = false
+    @State private var hasCheckedHealthWeight = false
     @State private var hydrationTargetML = 2000
     @State private var hasCustomizedTarget = false
 
@@ -182,7 +184,7 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Hydration Target")
                     .font(.title2.bold())
-                Text("Pouch patients often need more fluid than average. We can suggest a starting point from your body weight — you can always adjust it later in Settings.")
+                Text("Pouch patients often need more fluid than average. We'll check Health for your weight to suggest a starting point — you can always adjust it later in Settings.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -192,6 +194,11 @@ struct OnboardingView: View {
             if knowsWeight {
                 VStack(alignment: .leading, spacing: 8) {
                     Stepper("Weight: \(Int(weightLb)) lb", value: $weightLb, in: 60...400, step: 1)
+                    if weightFromHealth {
+                        Text("From Health — adjust if this isn't current.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                     if !hasCustomizedTarget {
                         Text("Suggested target: \(suggestedHydrationTargetML) mL/day")
                             .font(.caption)
@@ -223,6 +230,21 @@ struct OnboardingView: View {
                 hasCustomizedTarget = true
             }
         }
+        .task {
+            await tryLoadWeightFromHealth()
+        }
+    }
+
+    private func tryLoadWeightFromHealth() async {
+        guard !hasCheckedHealthWeight else { return }
+        hasCheckedHealthWeight = true
+
+        await healthKit.requestAuthorization()
+        guard let kg = try? await healthKit.latestBodyMassKG() else { return }
+
+        weightLb = (kg * 2.20462).rounded()
+        weightFromHealth = true
+        knowsWeight = true
     }
 
     // MARK: - Navigation
