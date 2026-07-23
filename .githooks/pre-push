@@ -26,9 +26,15 @@ fi
 
 echo "pre-push: running senior-apple-reviewer on $DIFF_RANGE (this may take a minute)..." >&2
 
-PROMPT="Use the senior-apple-reviewer subagent to review the changes in the git range $DIFF_RANGE (run 'git diff $DIFF_RANGE' yourself to see them) that are about to be pushed. Report findings most-severe first. On the very last line, print exactly 'REVIEW_VERDICT: BLOCK' if there are build-breaking crashes, data loss, or compile errors among the findings, otherwise print exactly 'REVIEW_VERDICT: PASS'."
+PROMPT="You are acting as this repo's senior-apple-reviewer — read .claude/agents/senior-apple-reviewer.md first for the full brief and project-specific gotchas, then review with that judgment. Piped into you via stdin is the exact, authoritative diff about to be pushed (range: $DIFF_RANGE), in standard unified diff format: lines starting with '+' were ADDED by this push, lines starting with '-' were REMOVED. Do NOT run 'git diff' yourself or otherwise re-derive this diff — review exactly what was piped in. Re-deriving it yourself has previously produced a reversed reading (added lines misreported as removed), so treat the piped text as ground truth.
 
-OUTPUT=$(claude -p --no-session-persistence "$PROMPT" 2>&1)
+This is a report-only pass with no human watching: you MUST NOT edit, write, or otherwise modify any file, even if you spot a clear improvement — this is an unattended pre-push hook, not an interactive session, so there is no one to approve a change and no chance to verify it built. If you see a better approach, describe it in your written findings as a suggestion; do not act on it. You may run read-only commands (cat/grep/find) and a build command to check compilation.
+
+Before naming any specific API, method, type, or entitlement in a finding, verify it actually exists by grepping the real SDK headers (this project's Xcode is at /Applications/Xcode-beta.app, iOS SDK headers under Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS27.0.sdk/System/Library/Frameworks/*/Headers/) — do not assert an API exists, or suggest replacing working code with a call to one, from memory alone. If you can't verify it, say so explicitly and downgrade it to a 'worth checking' note rather than a stated fact or actionable suggestion. Naming a nonexistent API as a fix has already happened once and would have broken the build had it been applied.
+
+Report findings most-severe first. Then, as a mandatory final line of output — not optional, do not omit it, do not paraphrase it — print exactly one of these two strings and nothing else on that line: 'REVIEW_VERDICT: BLOCK' if there are build-breaking crashes, data loss, or compile errors among the findings, or 'REVIEW_VERDICT: PASS' otherwise. A missing verdict line is a failure of your task."
+
+OUTPUT=$(git diff "$DIFF_RANGE" -- | claude -p --no-session-persistence --allowedTools "Read Grep Glob Bash" "$PROMPT" 2>&1)
 STATUS=$?
 
 echo "$OUTPUT" >&2
