@@ -1,0 +1,49 @@
+#!/bin/sh
+# Runs the senior-apple-reviewer subagent on outgoing commits before every push.
+#
+# Only blocks the push on build-breaking findings (crashes, data loss, compile
+# errors) — lesser findings are printed but don't stop the push. Full review
+# output always prints to the terminal either way.
+#
+# Bypass for a single push: git push --no-verify
+# Enable on a fresh clone (one-time):  git config core.hooksPath .githooks
+
+if ! command -v claude >/dev/null 2>&1; then
+    echo "pre-push: 'claude' CLI not found, skipping senior-apple-reviewer review." >&2
+    exit 0
+fi
+
+if git rev-parse --abbrev-ref --symbolic-full-name '@{push}' >/dev/null 2>&1; then
+    DIFF_RANGE='@{push}...HEAD'
+else
+    # No upstream tracking yet (e.g. first push of a new branch) — best effort: review the last commit.
+    DIFF_RANGE='HEAD~1...HEAD'
+fi
+
+if git diff --quiet "$DIFF_RANGE" -- 2>/dev/null; then
+    exit 0
+fi
+
+echo "pre-push: running senior-apple-reviewer on $DIFF_RANGE (this may take a minute)..." >&2
+
+PROMPT="Use the senior-apple-reviewer subagent to review the changes in the git range $DIFF_RANGE (run 'git diff $DIFF_RANGE' yourself to see them) that are about to be pushed. Report findings most-severe first. On the very last line, print exactly 'REVIEW_VERDICT: BLOCK' if there are build-breaking crashes, data loss, or compile errors among the findings, otherwise print exactly 'REVIEW_VERDICT: PASS'."
+
+OUTPUT=$(claude -p --no-session-persistence "$PROMPT" 2>&1)
+STATUS=$?
+
+echo "$OUTPUT" >&2
+
+if [ "$STATUS" -ne 0 ]; then
+    echo "" >&2
+    echo "pre-push: senior-apple-reviewer failed to run (exit $STATUS) — allowing push anyway." >&2
+    exit 0
+fi
+
+if echo "$OUTPUT" | grep -q "REVIEW_VERDICT: BLOCK"; then
+    echo "" >&2
+    echo "pre-push: senior-apple-reviewer found build-breaking issues above. Push aborted." >&2
+    echo "Fix them, or bypass with: git push --no-verify" >&2
+    exit 1
+fi
+
+exit 0
