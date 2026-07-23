@@ -3,18 +3,26 @@ import SwiftData
 
 @Model
 final class UserProfile {
-    var stageRawValue: String
+    /// Set only when the user has overridden the date-derived stage; nil means "follow the dates".
+    var manualStageRawValue: String?
     var stagedSurgeryDate: Date?
     var takedownDate: Date?
     var dailyHydrationTargetML: Int
 
+    var manualStageOverride: Stage? {
+        get { manualStageRawValue.flatMap { Stage(rawValue: $0) } }
+        set { manualStageRawValue = newValue?.rawValue }
+    }
+
+    /// The stage actually shown in the app: the manual override if set, otherwise inferred from surgery dates.
     var stage: Stage {
-        get { Stage(rawValue: stageRawValue) ?? .preOp }
-        set { stageRawValue = newValue.rawValue }
+        manualStageOverride
+            ?? Stage.derived(stagedSurgeryDate: stagedSurgeryDate, takedownDate: takedownDate)
+            ?? .preOp
     }
 
     init(stage: Stage = .preOp, dailyHydrationTargetML: Int = 2000) {
-        self.stageRawValue = stage.rawValue
+        self.manualStageRawValue = stage.rawValue
         self.dailyHydrationTargetML = dailyHydrationTargetML
     }
 }

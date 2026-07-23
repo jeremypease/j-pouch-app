@@ -1,12 +1,30 @@
 import Foundation
 
-enum Stage: String, Codable, CaseIterable, Identifiable {
+enum Stage: String, Codable, CaseIterable, Identifiable, Hashable {
     case preOp
     case stagedSurgery
     case adaptation
     case longTermMaintenance
 
     var id: String { rawValue }
+
+    /// Adaptation runs the first year after takedown, matching the PRD's ~6–12 month window.
+    static let adaptationWindowMonths = 12
+
+    /// Infers the stage from surgery dates, or nil if neither date has been entered yet.
+    static func derived(stagedSurgeryDate: Date?, takedownDate: Date?, asOf referenceDate: Date = .now) -> Stage? {
+        guard stagedSurgeryDate != nil || takedownDate != nil else { return nil }
+
+        if let takedownDate, takedownDate <= referenceDate {
+            let months = Calendar.current.dateComponents([.month], from: takedownDate, to: referenceDate).month ?? 0
+            return months >= adaptationWindowMonths ? .longTermMaintenance : .adaptation
+        }
+        if let stagedSurgeryDate, stagedSurgeryDate <= referenceDate {
+            return .stagedSurgery
+        }
+        // Dates are entered but still in the future.
+        return .preOp
+    }
 
     var displayName: String {
         switch self {
