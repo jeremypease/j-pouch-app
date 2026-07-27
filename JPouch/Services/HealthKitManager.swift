@@ -11,6 +11,10 @@ struct HealthMedication: Identifiable {
 }
 
 enum HealthConnectionState: Equatable {
+    /// Not checked yet. Distinct from `notConnected` so the UI can stay quiet instead of
+    /// asserting a state it hasn't verified — briefly flashing "Not connected" at someone who
+    /// is connected is the exact bug this type exists to prevent.
+    case unknown
     /// The device has no Health data (e.g. iPad without Health).
     case unavailable
     /// The person hasn't been through the permission flow yet.
@@ -35,7 +39,7 @@ final class HealthKitManager {
     /// Stored rather than computed so `@Observable` actually invalidates views when it
     /// changes. A computed property reading `store` is invisible to observation tracking,
     /// which meant the UI kept showing a stale "Not connected" forever.
-    private(set) var connectionState: HealthConnectionState = .notConnected
+    private(set) var connectionState: HealthConnectionState = .unknown
     /// Whether we can write water samples. This is the one permission HealthKit will tell us
     /// about, because granting or denying a *write* leaks nothing about the person's data.
     private(set) var canWriteWater = false

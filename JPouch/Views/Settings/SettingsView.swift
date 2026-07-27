@@ -15,6 +15,8 @@ struct SettingsView: View {
             ? " Medication sharing is a separate permission — manage it under Log → Meds."
             : ""
         switch healthKit.connectionState {
+        case .unknown:
+            return ""
         case .unavailable:
             return "Health data isn't available on this device."
         case .notConnected:
@@ -94,6 +96,8 @@ struct SettingsView: View {
                 Section {
                     LabeledContent("Status") {
                         switch healthKit.connectionState {
+                        case .unknown:
+                            Text("Checking…").foregroundStyle(.secondary)
                         case .unavailable:
                             Text("Unavailable").foregroundStyle(.secondary)
                         case .notConnected:
@@ -119,7 +123,7 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                    case .unavailable:
+                    case .unknown, .unavailable:
                         EmptyView()
                     }
                 } header: {

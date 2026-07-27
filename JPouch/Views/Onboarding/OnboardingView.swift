@@ -196,6 +196,10 @@ struct OnboardingView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
+                // Covers .unknown as well as .notConnected. Unlike Settings, showing the
+                // button before the check completes is the right default here: this is
+                // first run, so almost nobody is connected yet, and the button is the
+                // actionable choice either way.
                 Button {
                     connectToHealth()
                 } label: {
