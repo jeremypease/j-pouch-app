@@ -27,6 +27,12 @@ People who undergo j-pouch (ileoanal pouch) surgery go through a distinct, multi
 **Pre-op / newly diagnosed**
 - As a person scheduled for j-pouch surgery, I want a plain-language stage-by-stage overview of what's coming so I know what to expect at each surgery and in between.
 - As a pre-op patient, I want to set my surgery dates so the app can adapt what it asks me to track once I've had surgery.
+- As a person who hasn't had surgery yet, I want to say which surgical pathway I'm on (or that it isn't decided yet) so the app knows how many stages to expect rather than assuming one route.
+
+**Between surgeries, living with an ileostomy**
+- As someone who had an emergency colectomy and now has an end ileostomy while I wait for pouch construction, I want the app to recognise that I don't have a pouch yet, so it stops asking me pouch-shaped questions that don't apply to me.
+- As an ileostomy patient, I want to log output by volume rather than by frequency and consistency, because that's the number my care team actually asks about.
+- As an ileostomy patient, I want dehydration warnings tuned to high-output-stoma risk, since that's the most common reason people like me get readmitted.
 
 **Adaptation phase (post-takedown, first ~6–12 months)**
 - As a patient in the adaptation phase, I want to log an output (frequency, consistency, urgency, blood, time of day) in under 30 seconds so I'll actually keep doing it on bad days.
@@ -89,7 +95,26 @@ People who undergo j-pouch (ileoanal pouch) surgery go through a distinct, multi
 **Free tier**
 - All core logging (output, hydration, food, meds) and the stage-aware home screen are free, unlimited.
 
+**Pricing**
+- $4.99/month or $39.99/year (33% off annual), 7-day free trial of paid tier.
+- Benchmarked against niche health-tracker comparables: Cara Care (GI-focused) $8–10/mo, Bearable (chronic illness) $6.99/mo or $34.99/yr, CareClinic $9.99/mo. Priced at the lower-middle of that range given j-pouch is a narrower niche than general IBD/chronic illness — smaller addressable market, but a highly motivated, high-LTV audience since surgery is a one-time life event rather than an ongoing diagnosis to re-market to.
+
 ### Nice-to-Have (P1)
+
+**Surgical pathway & ostomy-aware tracking** *(highest-priority P1 — see note below on why this is closer to a correctness gap than a feature)*
+
+The current four-stage model (pre-op / staged surgery / adaptation / long-term maintenance) collapses two genuinely different situations into "pre-op": someone with an intact colon who is still deciding on surgery, and someone who has already had an emergency colectomy and is living with an end ileostomy while waiting for pouch construction. Those two people need almost nothing in common from the app.
+
+- Capture which surgical pathway the user is on, since the number of stages and what sits between them varies: single-stage (pouch built with no diverting ileostomy), two-stage (pouch + diverting loop ileostomy, then takedown), modified two-stage (colectomy with end ileostomy, then pouch construction and takedown together), three-stage (colectomy with end ileostomy, then pouch construction with loop ileostomy, then takedown). "Not decided yet" must be a first-class option — many pre-op users genuinely don't know.
+- Track whether the user currently has an ostomy, derived from pathway plus surgery dates but always user-overridable, since real surgical journeys deviate from the plan.
+- Adapt output logging to what the person actually has. **Pouch output and ileostomy output are not the same measurement**, and the current `OutputEntry` model is pouch-shaped throughout:
+  - Ileostomy output is assessed clinically by **volume over 24 hours**, not by frequency and Bristol-style consistency. Emptying frequency is at best a rough proxy.
+  - Urgency does not apply to an ileostomy — there is no sphincter involved — so asking about it is noise at best and alarming at worst.
+  - "Night episodes" means bag leakage or an overnight empty, not seepage; the same field means something different.
+- Retune the dehydration flag for ostomy users. This is the sharp edge: **high-output ileostomy is one of the most common causes of readmission after stoma formation**, so the cohort currently least well served by the app is arguably the one at highest dehydration risk. A frequency-over-baseline rule is the wrong shape for them; a volume-per-24h rule is the right one.
+- Until this ships, the app should be honest about scope rather than silently mis-serving ostomy users — either by saying pouch-focused tracking is what it does today, or by gating ostomy-relevant flags off.
+
+*Note on priority: this is filed as P1 because the work is substantial (data model, logging UI, and a second flag rule), but it is not a nice-to-have in the usual sense — it is a cohort the app currently models incorrectly rather than one it merely lacks features for. Worth deciding deliberately whether it should be pulled into P0 scope before launch.*
 
 - Kegel/pelvic floor exercise reminders and a simple guided routine (text/timer based, not video).
 - Pre-op and staged-surgery educational content, written plainly, organized by stage.
@@ -126,6 +151,8 @@ People who undergo j-pouch (ileoanal pouch) surgery go through a distinct, multi
 - **(Legal)** What's the right framing/disclaimer for the pouchitis and dehydration "flags" so they clearly read as pattern-noticing, not medical advice? Worth a plain-English review before launch given the health-data sensitivity.
 - **(Design/Engineering)** Bristol stool scale is designed for solid stool — j-pouch output is often looser by nature. Does the logging scale need a pouch-specific adaptation, and is there existing clinical literature (e.g., from ostomy.org or Cleveland Clinic pouch programs) to base it on rather than inventing one from scratch?
 - **(Engineering)** Confirm HealthKit's dietary water and body mass record types are sufficient, or whether a custom correlation needs data stored app-side (HealthKit has no native "bowel output" record type, so symptom logs will live in the app's own store regardless).
+- **(Clinical — needs sourcing before build)** What volume threshold should define "high output" for an ileostomy in the retuned dehydration flag? A specific mL/24h figure is commonly cited in stoma-care guidance, but the number should come from a citable clinical source rather than being picked, and it may need to scale with body weight. Same question for how many consecutive days should hold before flagging. Until this is sourced, the ostomy dehydration rule shouldn't ship with an invented threshold.
+- **(Clinical/Design)** Do the surgical pathway names used in onboarding (single-stage, two-stage, modified two-stage, three-stage) match what surgeons actually tell patients? Patients often know "I'm having the two-step" or just "I have a bag for now" rather than formal terminology, so the wording may need to lead with plain description and keep the clinical term secondary.
 - **(Stakeholder)** Is $4.99–$6.99/month in line with what this audience will pay, or does the smaller, more medically-anxious patient base support a different price point than the general IBD-tracker comps (Flarely, Tract) suggest?
 
 ## Timeline Considerations
