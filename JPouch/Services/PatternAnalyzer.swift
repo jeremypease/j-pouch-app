@@ -81,11 +81,17 @@ enum PatternAnalyzer {
     }
 
     /// A consecutive run of days on which a flag would have been showing.
-    struct FlagEpisode: Equatable {
+    struct FlagEpisode: Identifiable, Equatable {
         var kind: FlagKind
         var start: Date
         var end: Date
         var dayCount: Int
+
+        /// A dehydration and a flare episode can legitimately begin on the same day, so the
+        /// start date alone is not a usable identity. Kind plus start is unique, since one
+        /// kind cannot have two episodes starting on the same day. Derived rather than a
+        /// stored UUID so the type keeps value equality.
+        var id: String { "\(kind.rawValue)-\(start.timeIntervalSince1970)" }
     }
 
     // MARK: - Building summaries

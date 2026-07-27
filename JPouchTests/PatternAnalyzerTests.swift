@@ -174,6 +174,34 @@ struct PatternGuardTests {
         #expect(analysis.flare == .flagged(consecutiveDays: 2))
     }
 
+    /// Both flags can first appear on the same day (dehydration needs 3 qualifying days, flare
+    /// needs 2, so a fluid deficit starting one day before blood lines them up). Anything
+    /// rendering these in a list needs an identity that survives that.
+    @Test("Two episodes beginning on the same day remain distinguishable")
+    func episodesSharingAStartDateStayDistinct() {
+        var summaries = baselineDays(startingDaysAgo: 5)
+        summaries += [
+            Summary(date: testDaysAgo(4), outputCount: 12, hydrationML: 500, hasHydrationLogged: true, hasBlood: false),
+            Summary(date: testDaysAgo(3), outputCount: 12, hydrationML: 500, hasHydrationLogged: true, hasBlood: true),
+            Summary(date: testDaysAgo(2), outputCount: 12, hydrationML: 500, hasHydrationLogged: true, hasBlood: true),
+        ]
+
+        let episodes = PatternAnalyzer.flagEpisodes(
+            summaries: summaries,
+            hydrationTargetML: hydrationTarget,
+            from: testDaysAgo(4),
+            to: testToday,
+            calendar: testCalendar
+        )
+
+        #expect(episodes.count == 2)
+        #expect(Set(episodes.map(\.kind)) == [.dehydration, .flare])
+        // The premise of the test: they really do share a start date.
+        #expect(Set(episodes.map(\.start)).count == 1)
+        // The thing that matters: identity still separates them.
+        #expect(Set(episodes.map(\.id)).count == 2)
+    }
+
     @Test("Steady logging at a high but consistent personal baseline is not flagged")
     func highButStablePersonalBaselineIsNormal() {
         // 12 stools/day every day is a lot in absolute terms, but if it's this person's

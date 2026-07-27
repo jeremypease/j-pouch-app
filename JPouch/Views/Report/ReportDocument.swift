@@ -266,7 +266,7 @@ private struct FlagsSection: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(report.flagEpisodes, id: \.start) { episode in
+                ForEach(report.flagEpisodes) { episode in
                     HStack(alignment: .top, spacing: 6) {
                         Text("•")
                         VStack(alignment: .leading, spacing: 1) {

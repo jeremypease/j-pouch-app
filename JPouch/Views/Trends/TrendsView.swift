@@ -25,7 +25,7 @@ struct TrendsView: View {
                     .pickerStyle(.segmented)
 
                     Button {
-                        generateReport()
+                        Task { await generateReport() }
                     } label: {
                         if isGenerating {
                             HStack {
@@ -86,10 +86,15 @@ struct TrendsView: View {
         }
     }
 
-    private func generateReport() {
+    private func generateReport() async {
         isGenerating = true
         generationFailed = false
         reportURL = nil
+
+        // Give SwiftUI a chance to paint the spinner before the main thread is tied up.
+        // The work itself has to stay on the main actor — the SwiftData models below are
+        // bound to it — so this makes progress visible rather than truly backgrounding it.
+        await Task.yield()
 
         let report = ReportBuilder.build(
             windowDays: windowDays,
