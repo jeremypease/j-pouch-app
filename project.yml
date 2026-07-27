@@ -47,6 +47,19 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 37GS5LK7P7
+  JPouchTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: JPouchTests
+    dependencies:
+      - target: JPouch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jeremypease.jpouch.tests
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: true
 schemes:
   JPouch:
     build:
@@ -56,5 +69,7 @@ schemes:
       config: Debug
     test:
       config: Debug
+      targets:
+        - JPouchTests
     archive:
       config: Release
