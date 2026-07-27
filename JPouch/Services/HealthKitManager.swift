@@ -10,6 +10,16 @@ struct HealthMedication: Identifiable {
     let hasSchedule: Bool
 }
 
+enum HealthConnectionState: Equatable {
+    /// The device has no Health data (e.g. iPad without Health).
+    case unavailable
+    /// The person hasn't been through the permission flow yet.
+    case notConnected
+    /// The person has answered our permission request. Note this does *not* mean they granted
+    /// everything — see the discussion on `refreshConnectionState()`.
+    case connected
+}
+
 @Observable
 final class HealthKitManager {
     static let shared = HealthKitManager()
@@ -19,24 +29,49 @@ final class HealthKitManager {
     private let waterType = HKQuantityType(.dietaryWater)
     private let bodyMassType = HKQuantityType(.bodyMass)
 
+    private var shareTypes: Set<HKSampleType> { [waterType] }
+    private var readTypes: Set<HKObjectType> { [waterType, bodyMassType] }
+
+    /// Stored rather than computed so `@Observable` actually invalidates views when it
+    /// changes. A computed property reading `store` is invisible to observation tracking,
+    /// which meant the UI kept showing a stale "Not connected" forever.
+    private(set) var connectionState: HealthConnectionState = .notConnected
+    /// Whether we can write water samples. This is the one permission HealthKit will tell us
+    /// about, because granting or denying a *write* leaks nothing about the person's data.
+    private(set) var canWriteWater = false
+
     var isHealthDataAvailable: Bool {
         HKHealthStore.isHealthDataAvailable()
     }
 
-    /// Read fresh from HealthKit every time rather than cached, so it can't go stale if a
-    /// request gets cancelled mid-flight (e.g. the requesting view disappears before the
-    /// system prompt resolves). Water is a share (write) type, so its authorization status
-    /// is one of the few things HealthKit actually reports back to us; read-only types like
-    /// body mass are deliberately kept opaque for privacy, so this is the best signal we have.
-    var isAuthorized: Bool {
-        store.authorizationStatus(for: waterType) == .sharingAuthorized
+    /// Determines whether the person has already answered our authorization request.
+    ///
+    /// HealthKit deliberately never reveals whether a *read* permission was granted — saying
+    /// "denied" would itself disclose that someone is hiding data — so `authorizationStatus`
+    /// reports only on write types and returns denied for everything else. Checking it alone
+    /// meant someone who granted weight reading but not water writing looked disconnected
+    /// even while the app was successfully reading their weight.
+    ///
+    /// `statusForAuthorizationRequest` answers the question we can actually answer: has this
+    /// person been through the prompt for these types. That maps to what "connected" means to
+    /// a user far better than any single permission does.
+    func refreshConnectionState() async {
+        guard isHealthDataAvailable else {
+            connectionState = .unavailable
+            return
+        }
+        let status = try? await store.statusForAuthorizationRequest(toShare: shareTypes, read: readTypes)
+        connectionState = status == .unnecessary ? .connected : .notConnected
+        canWriteWater = store.authorizationStatus(for: waterType) == .sharingAuthorized
     }
 
     func requestAuthorization() async {
-        guard isHealthDataAvailable else { return }
-        let toShare: Set<HKSampleType> = [waterType]
-        let toRead: Set<HKObjectType> = [waterType, bodyMassType]
-        _ = try? await store.requestAuthorization(toShare: toShare, read: toRead)
+        guard isHealthDataAvailable else {
+            connectionState = .unavailable
+            return
+        }
+        _ = try? await store.requestAuthorization(toShare: shareTypes, read: readTypes)
+        await refreshConnectionState()
     }
 
     /// Writes a water intake sample to HealthKit and returns its sample UUID.

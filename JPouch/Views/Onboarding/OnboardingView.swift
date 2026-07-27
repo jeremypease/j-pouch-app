@@ -187,10 +187,14 @@ struct OnboardingView: View {
                     .foregroundStyle(.secondary)
             }
 
-            if healthKit.isAuthorized {
+            if healthKit.connectionState == .connected {
                 Label("Connected to Apple Health", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .font(.subheadline)
+            } else if healthKit.connectionState == .unavailable {
+                Text("Apple Health isn't available on this device.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } else {
                 Button {
                     connectToHealth()
@@ -251,6 +255,9 @@ struct OnboardingView: View {
             if hydrationTargetML != suggestedHydrationTargetML {
                 hasCustomizedTarget = true
             }
+        }
+        .task {
+            await healthKit.refreshConnectionState()
         }
     }
 

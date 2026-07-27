@@ -5,6 +5,24 @@ struct SettingsView: View {
     @Bindable var profile: UserProfile
 
     @State private var healthKit = HealthKitManager.shared
+    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
+
+    /// Permissions are changed outside the app, in Health, so the copy has to be clear that
+    /// this screen can't turn them off — and honest that iOS hides read grants from us.
+    private var healthFooter: String {
+        let medications = healthKit.supportsMedicationsAPI
+            ? " Medication sharing is a separate permission — manage it under Log → Meds."
+            : ""
+        switch healthKit.connectionState {
+        case .unavailable:
+            return "Health data isn't available on this device."
+        case .notConnected:
+            return "J-Pouch can read your weight to suggest a hydration target, and save the water you log back to Health.\(medications)"
+        case .connected:
+            return "Apple doesn't let apps see which reading permissions you granted, or switch them off from here. To change or revoke what J-Pouch can see, open Health → Profile → Apps → J-Pouch.\(medications)"
+        }
+    }
 
     private var stageOverrideBinding: Binding<Stage?> {
         Binding(
@@ -74,26 +92,40 @@ struct SettingsView: View {
                     )
                 }
                 Section {
-                    HStack {
-                        Text("Status")
-                        Spacer()
-                        Text(healthKit.isAuthorized ? "Connected" : "Not connected")
-                            .foregroundStyle(.secondary)
+                    LabeledContent("Status") {
+                        switch healthKit.connectionState {
+                        case .unavailable:
+                            Text("Unavailable").foregroundStyle(.secondary)
+                        case .notConnected:
+                            Text("Not connected").foregroundStyle(.secondary)
+                        case .connected:
+                            Label("Connected", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                        }
                     }
-                    Button("Connect to Apple Health") {
-                        Task {
-                            await healthKit.requestAuthorization()
-                            if healthKit.supportsMedicationsAPI {
-                                await healthKit.requestMedicationsAuthorization()
+
+                    switch healthKit.connectionState {
+                    case .connected:
+                        LabeledContent("Saving water to Health", value: healthKit.canWriteWater ? "On" : "Off")
+                        Button("Manage in Health App") {
+                            openURL(URL(string: "x-apple-health://")!)
+                        }
+                    case .notConnected:
+                        Button("Connect to Apple Health") {
+                            Task {
+                                await healthKit.requestAuthorization()
+                                if healthKit.supportsMedicationsAPI {
+                                    await healthKit.requestMedicationsAuthorization()
+                                }
                             }
                         }
+                    case .unavailable:
+                        EmptyView()
                     }
                 } header: {
                     Text("Apple Health")
                 } footer: {
-                    if healthKit.supportsMedicationsAPI {
-                        Text("This status is for water and weight syncing only. Medication sharing is a separate Apple permission with no reliable connected/not-connected status — manage it from the Medications section under Log instead.")
-                    }
+                    Text(healthFooter)
                 }
                 Section {
                     Text("J-Pouch tracks patterns to help you spot trends — it doesn't diagnose. Always bring concerns to your GI.")
@@ -102,6 +134,15 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .task {
+                await healthKit.refreshConnectionState()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                // Permissions can be changed in the Health app while we're backgrounded,
+                // so re-check rather than showing whatever was true when we last appeared.
+                guard phase == .active else { return }
+                Task { await healthKit.refreshConnectionState() }
+            }
         }
     }
 }
