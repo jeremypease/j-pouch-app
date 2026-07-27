@@ -4,20 +4,6 @@ import Testing
 
 private typealias Summary = PatternAnalyzer.DailySummary
 
-/// Fixed UTC calendar and reference date so these never depend on the machine's timezone
-/// or the wall clock.
-private let calendar: Calendar = {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = TimeZone(identifier: "UTC")!
-    return calendar
-}()
-
-private let today = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
-
-private func daysAgo(_ offset: Int) -> Date {
-    calendar.date(byAdding: .day, value: -offset, to: today)!
-}
-
 /// A run of unremarkable days to establish a personal baseline.
 private func baselineDays(
     count: Int = 30,
@@ -27,7 +13,7 @@ private func baselineDays(
 ) -> [Summary] {
     (start..<(start + count)).map { offset in
         Summary(
-            date: daysAgo(offset),
+            date: testDaysAgo(offset),
             outputCount: outputPerDay,
             hydrationML: hydrationML,
             hasHydrationLogged: true,
@@ -42,8 +28,8 @@ private func analyze(_ summaries: [Summary]) -> PatternAnalyzer.Analysis {
     PatternAnalyzer.analyze(
         summaries: summaries,
         hydrationTargetML: hydrationTarget,
-        asOf: today,
-        calendar: calendar
+        asOf: testToday,
+        calendar: testCalendar
     )
 }
 
@@ -55,7 +41,7 @@ struct DehydrationFlagTests {
     func flagsOnThreeQualifyingDays() {
         let recent = (0..<3).map { offset in
             Summary(
-                date: daysAgo(offset),
+                date: testDaysAgo(offset),
                 outputCount: 9,
                 hydrationML: 1_000,
                 hasHydrationLogged: true
@@ -68,9 +54,9 @@ struct DehydrationFlagTests {
     @Test("Does not flag when the pattern has only held for 2 days")
     func doesNotFlagBelowThreshold() {
         let recent = (0..<2).map { offset in
-            Summary(date: daysAgo(offset), outputCount: 9, hydrationML: 1_000, hasHydrationLogged: true)
+            Summary(date: testDaysAgo(offset), outputCount: 9, hydrationML: 1_000, hasHydrationLogged: true)
         }
-        let normal = [Summary(date: daysAgo(2), outputCount: 6, hydrationML: 3_000, hasHydrationLogged: true)]
+        let normal = [Summary(date: testDaysAgo(2), outputCount: 6, hydrationML: 3_000, hasHydrationLogged: true)]
         let analysis = analyze(baselineDays(startingDaysAgo: 3) + normal + recent)
         #expect(analysis.dehydration == .steady)
     }
@@ -80,7 +66,7 @@ struct DehydrationFlagTests {
     @Test("Does not flag when hydration simply wasn't logged")
     func doesNotFlagOnUnloggedHydration() {
         let recent = (0..<3).map { offset in
-            Summary(date: daysAgo(offset), outputCount: 9, hydrationML: 0, hasHydrationLogged: false)
+            Summary(date: testDaysAgo(offset), outputCount: 9, hydrationML: 0, hasHydrationLogged: false)
         }
         let analysis = analyze(baselineDays(startingDaysAgo: 3) + recent)
         #expect(analysis.dehydration == .steady)
@@ -89,7 +75,7 @@ struct DehydrationFlagTests {
     @Test("Does not flag when hydration meets target despite elevated output")
     func doesNotFlagWhenHydrated() {
         let recent = (0..<3).map { offset in
-            Summary(date: daysAgo(offset), outputCount: 9, hydrationML: 3_500, hasHydrationLogged: true)
+            Summary(date: testDaysAgo(offset), outputCount: 9, hydrationML: 3_500, hasHydrationLogged: true)
         }
         let analysis = analyze(baselineDays(startingDaysAgo: 3) + recent)
         #expect(analysis.dehydration == .steady)
@@ -104,7 +90,7 @@ struct FlareFlagTests {
     func flagsOnTwoQualifyingDays() {
         let recent = (0..<2).map { offset in
             Summary(
-                date: daysAgo(offset),
+                date: testDaysAgo(offset),
                 outputCount: 9, // baseline 6 * 1.5
                 hydrationML: 3_000,
                 hasHydrationLogged: true,
@@ -118,7 +104,7 @@ struct FlareFlagTests {
     @Test("Does not flag a spike without blood")
     func doesNotFlagSpikeAlone() {
         let recent = (0..<2).map { offset in
-            Summary(date: daysAgo(offset), outputCount: 12, hydrationML: 3_000, hasHydrationLogged: true, hasBlood: false)
+            Summary(date: testDaysAgo(offset), outputCount: 12, hydrationML: 3_000, hasHydrationLogged: true, hasBlood: false)
         }
         let analysis = analyze(baselineDays(startingDaysAgo: 2) + recent)
         #expect(analysis.flare == .steady)
@@ -127,7 +113,7 @@ struct FlareFlagTests {
     @Test("Does not flag blood without a frequency spike")
     func doesNotFlagBloodAlone() {
         let recent = (0..<2).map { offset in
-            Summary(date: daysAgo(offset), outputCount: 6, hydrationML: 3_000, hasHydrationLogged: true, hasBlood: true)
+            Summary(date: testDaysAgo(offset), outputCount: 6, hydrationML: 3_000, hasHydrationLogged: true, hasBlood: true)
         }
         let analysis = analyze(baselineDays(startingDaysAgo: 2) + recent)
         #expect(analysis.flare == .steady)
@@ -136,8 +122,8 @@ struct FlareFlagTests {
     @Test("Does not flag when the pattern has only held for 1 day")
     func doesNotFlagSingleDay() {
         let recent = [
-            Summary(date: daysAgo(0), outputCount: 12, hydrationML: 3_000, hasHydrationLogged: true, hasBlood: true),
-            Summary(date: daysAgo(1), outputCount: 6, hydrationML: 3_000, hasHydrationLogged: true, hasBlood: false),
+            Summary(date: testDaysAgo(0), outputCount: 12, hydrationML: 3_000, hasHydrationLogged: true, hasBlood: true),
+            Summary(date: testDaysAgo(1), outputCount: 6, hydrationML: 3_000, hasHydrationLogged: true, hasBlood: false),
         ]
         let analysis = analyze(baselineDays(startingDaysAgo: 2) + recent)
         #expect(analysis.flare == .steady)
@@ -151,7 +137,7 @@ struct PatternGuardTests {
     func requiresMinimumHistory() {
         let recent = (0..<3).map { offset in
             Summary(
-                date: daysAgo(offset),
+                date: testDaysAgo(offset),
                 outputCount: 20,
                 hydrationML: 100,
                 hasHydrationLogged: true,
@@ -168,9 +154,9 @@ struct PatternGuardTests {
     @Test("A day with no logging breaks the streak instead of being skipped")
     func gapBreaksStreak() {
         let recent = [
-            Summary(date: daysAgo(0), outputCount: 9, hydrationML: 1_000, hasHydrationLogged: true),
-            // daysAgo(1) deliberately absent
-            Summary(date: daysAgo(2), outputCount: 9, hydrationML: 1_000, hasHydrationLogged: true),
+            Summary(date: testDaysAgo(0), outputCount: 9, hydrationML: 1_000, hasHydrationLogged: true),
+            // testDaysAgo(1) deliberately absent
+            Summary(date: testDaysAgo(2), outputCount: 9, hydrationML: 1_000, hasHydrationLogged: true),
         ]
         let analysis = analyze(baselineDays(startingDaysAgo: 3) + recent)
         #expect(analysis.dehydration == .steady)
@@ -181,7 +167,7 @@ struct PatternGuardTests {
     @Test("Baseline excludes the days being evaluated, so a spike can't mask itself")
     func baselineExcludesEvaluationWindow() {
         let recent = (0..<2).map { offset in
-            Summary(date: daysAgo(offset), outputCount: 30, hydrationML: 3_000, hasHydrationLogged: true, hasBlood: true)
+            Summary(date: testDaysAgo(offset), outputCount: 30, hydrationML: 3_000, hasHydrationLogged: true, hasBlood: true)
         }
         let analysis = analyze(baselineDays(startingDaysAgo: 2, outputPerDay: 6) + recent)
         #expect(analysis.baselineOutputPerDay == 6.0)
@@ -205,16 +191,16 @@ struct DailySummaryTests {
     @Test("Groups entries by calendar day and records blood presence")
     func groupsByDay() throws {
         let outputs = [
-            OutputEntry(timestamp: daysAgo(0).addingTimeInterval(3_600), blood: .none),
-            OutputEntry(timestamp: daysAgo(0).addingTimeInterval(7_200), blood: .streaks),
-            OutputEntry(timestamp: daysAgo(1).addingTimeInterval(3_600), blood: .none),
+            OutputEntry(timestamp: testDaysAgo(0).addingTimeInterval(3_600), blood: .none),
+            OutputEntry(timestamp: testDaysAgo(0).addingTimeInterval(7_200), blood: .streaks),
+            OutputEntry(timestamp: testDaysAgo(1).addingTimeInterval(3_600), blood: .none),
         ]
         let hydration = [
-            HydrationEntry(timestamp: daysAgo(0).addingTimeInterval(3_600), volumeML: 500),
-            HydrationEntry(timestamp: daysAgo(0).addingTimeInterval(7_200), volumeML: 250),
+            HydrationEntry(timestamp: testDaysAgo(0).addingTimeInterval(3_600), volumeML: 500),
+            HydrationEntry(timestamp: testDaysAgo(0).addingTimeInterval(7_200), volumeML: 250),
         ]
 
-        let summaries = PatternAnalyzer.dailySummaries(outputs: outputs, hydration: hydration, calendar: calendar)
+        let summaries = PatternAnalyzer.dailySummaries(outputs: outputs, hydration: hydration, calendar: testCalendar)
 
         #expect(summaries.count == 2)
 
@@ -232,8 +218,8 @@ struct DailySummaryTests {
 
     @Test("Days with no entries are absent rather than counted as zero-output days")
     func skipsUnloggedDays() {
-        let outputs = [OutputEntry(timestamp: daysAgo(0)), OutputEntry(timestamp: daysAgo(5))]
-        let summaries = PatternAnalyzer.dailySummaries(outputs: outputs, hydration: [], calendar: calendar)
+        let outputs = [OutputEntry(timestamp: testDaysAgo(0)), OutputEntry(timestamp: testDaysAgo(5))]
+        let summaries = PatternAnalyzer.dailySummaries(outputs: outputs, hydration: [], calendar: testCalendar)
         #expect(summaries.count == 2)
     }
 }

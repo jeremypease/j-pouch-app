@@ -22,7 +22,7 @@ struct MainTabView: View {
                 .tabItem { Label("Home", systemImage: "house") }
             LogView()
                 .tabItem { Label("Log", systemImage: "plus.circle") }
-            TrendsView()
+            TrendsView(profile: profile)
                 .tabItem { Label("Trends", systemImage: "chart.xyaxis.line") }
             SettingsView(profile: profile)
                 .tabItem { Label("Settings", systemImage: "gearshape") }

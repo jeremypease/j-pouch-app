@@ -68,6 +68,26 @@ enum PatternAnalyzer {
         var baselineOutputPerDay: Double?
     }
 
+    enum FlagKind: String, Equatable {
+        case dehydration
+        case flare
+
+        var displayName: String {
+            switch self {
+            case .dehydration: "Hydration"
+            case .flare: "Pattern change"
+            }
+        }
+    }
+
+    /// A consecutive run of days on which a flag would have been showing.
+    struct FlagEpisode: Equatable {
+        var kind: FlagKind
+        var start: Date
+        var end: Date
+        var dayCount: Int
+    }
+
     // MARK: - Building summaries
 
     /// Collapses raw entries into one summary per calendar day that has activity.
@@ -159,6 +179,75 @@ enum PatternAnalyzer {
             flare: flare,
             baselineOutputPerDay: flareBaseline ?? dehydrationBaseline
         )
+    }
+
+    // MARK: - History
+
+    /// Replays the analysis day by day across a window to find when flags would have been
+    /// showing, collapsing consecutive days into episodes.
+    ///
+    /// Each day is evaluated using only the data available up to that day, so this reflects
+    /// what the person would actually have seen at the time rather than hindsight.
+    static func flagEpisodes(
+        summaries: [DailySummary],
+        hydrationTargetML: Int,
+        from startDate: Date,
+        to endDate: Date,
+        calendar: Calendar = .current
+    ) -> [FlagEpisode] {
+        let start = calendar.startOfDay(for: startDate)
+        let end = calendar.startOfDay(for: endDate)
+        guard start <= end else { return [] }
+
+        var flaggedDays: [(day: Date, kind: FlagKind)] = []
+        var day = start
+        while day <= end {
+            let priorSummaries = summaries.filter { calendar.startOfDay(for: $0.date) <= day }
+            let analysis = analyze(
+                summaries: priorSummaries,
+                hydrationTargetML: hydrationTargetML,
+                asOf: day,
+                calendar: calendar
+            )
+            if case .flagged = analysis.flare {
+                flaggedDays.append((day, .flare))
+            }
+            if case .flagged = analysis.dehydration {
+                flaggedDays.append((day, .dehydration))
+            }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+            day = next
+        }
+
+        return collapseIntoEpisodes(flaggedDays, calendar: calendar)
+    }
+
+    private static func collapseIntoEpisodes(
+        _ flaggedDays: [(day: Date, kind: FlagKind)],
+        calendar: Calendar
+    ) -> [FlagEpisode] {
+        var episodes: [FlagEpisode] = []
+
+        for kind in [FlagKind.flare, .dehydration] {
+            let days = flaggedDays.filter { $0.kind == kind }.map(\.day).sorted()
+            var current: FlagEpisode?
+
+            for day in days {
+                if var episode = current,
+                   let expectedNext = calendar.date(byAdding: .day, value: 1, to: episode.end),
+                   calendar.isDate(day, inSameDayAs: expectedNext) {
+                    episode.end = day
+                    episode.dayCount += 1
+                    current = episode
+                } else {
+                    if let episode = current { episodes.append(episode) }
+                    current = FlagEpisode(kind: kind, start: day, end: day, dayCount: 1)
+                }
+            }
+            if let episode = current { episodes.append(episode) }
+        }
+
+        return episodes.sorted { $0.start < $1.start }
     }
 
     // MARK: - Internals
