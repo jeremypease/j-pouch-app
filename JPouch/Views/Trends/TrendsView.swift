@@ -68,11 +68,17 @@ struct TrendsView: View {
                         Text("No entries yet.").foregroundStyle(.secondary)
                     }
                     ForEach(recentOutput) { entry in
-                        VStack(alignment: .leading) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(entry.timestamp, style: .date) + Text(" \u{2022} ") + Text(entry.timestamp, style: .time)
                             Text("Consistency \(entry.consistency)/7 \u{2022} Pain \(entry.pain)/5\(entry.blood != .none ? " \u{2022} Blood: \(entry.blood.displayName)" : "")")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                            if let notes = entry.notes, !notes.isEmpty {
+                                Text(notes)
+                                    .font(.caption)
+                                    .italic()
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                     .onDelete { offsets in
