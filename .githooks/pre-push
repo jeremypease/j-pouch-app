@@ -1,6 +1,8 @@
 #!/bin/sh
-# Runs the senior-apple-reviewer on outgoing commits before every push and prints its
-# findings. Advisory only — it never blocks the push.
+# Two stages before every push:
+#
+#   1. The test suite. This DOES block — a failing test is a deterministic signal.
+#   2. The senior-apple-reviewer, printed for you to read. Advisory; never blocks.
 #
 # It was originally a gate, but across a full session of real use the model emitted the
 # machine-readable verdict the gate depended on in only about a third of runs, and the one
@@ -26,6 +28,36 @@ fi
 
 if git diff --quiet "$DIFF_RANGE" -- 2>/dev/null; then
     exit 0
+fi
+
+# Tests first, and unlike the review these DO block. A failing test is a deterministic,
+# unambiguous signal — exactly what the model verdict turned out not to be.
+if command -v xcodegen >/dev/null 2>&1 && [ -f project.yml ]; then
+    XCODE_DIR=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+    if [ -d "$XCODE_DIR" ]; then
+        echo "pre-push: running tests..." >&2
+        xcodegen generate >/dev/null 2>&1
+        TEST_LOG=$(mktemp)
+        if DEVELOPER_DIR="$XCODE_DIR" xcodebuild test \
+            -project JPouch.xcodeproj -scheme JPouch \
+            -destination "platform=iOS Simulator,name=iPhone 17" \
+            CODE_SIGNING_ALLOWED=NO >"$TEST_LOG" 2>&1; then
+            echo "pre-push: tests passed." >&2
+            rm -f "$TEST_LOG"
+        else
+            echo "" >&2
+            echo "pre-push: TESTS FAILED — push aborted." >&2
+            grep -E "error:|✘|failed" "$TEST_LOG" | head -30 >&2
+            echo "" >&2
+            echo "Full log: $TEST_LOG" >&2
+            echo "Bypass with: git push --no-verify" >&2
+            exit 1
+        fi
+    else
+        echo "pre-push: Xcode not found at $XCODE_DIR, skipping tests." >&2
+    fi
+else
+    echo "pre-push: xcodegen or project.yml missing, skipping tests." >&2
 fi
 
 echo "pre-push: running senior-apple-reviewer on $DIFF_RANGE (advisory, will not block)..." >&2

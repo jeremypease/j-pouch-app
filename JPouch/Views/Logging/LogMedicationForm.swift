@@ -121,9 +121,12 @@ struct LogMedicationForm: View {
             reminderMinutesOfDay: reminderTimes.map { Self.minutesSinceMidnight($0.time) }
         )
         modelContext.insert(entry)
+        // Snapshot on the main actor before handing off, so the model itself never crosses
+        // into the scheduler's async work.
+        let reminder = entry.reminderSnapshot()
         Task {
             await NotificationManager.shared.requestAuthorizationIfNeeded()
-            await NotificationManager.shared.scheduleReminders(for: entry)
+            await NotificationManager.shared.schedule(reminder)
         }
         name = ""
         dosage = ""

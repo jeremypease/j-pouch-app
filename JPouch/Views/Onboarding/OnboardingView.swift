@@ -21,6 +21,8 @@ struct OnboardingView: View {
 
     // Stage
     @State private var selectedStage: Stage = .adaptation
+    @State private var knowsSurgeryDate = false
+    @State private var surgeryDate = Date.now
 
     // Medications
     @State private var takingMedications = false
@@ -112,8 +114,36 @@ struct OnboardingView: View {
                     .buttonStyle(.plain)
                 }
             }
+
+            // Without a date there is nothing for the app to derive from, so it would be stuck
+            // on whatever was picked here until the person went looking in Settings.
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("I know my \(selectedStage.promptedDateLabel.lowercased())", isOn: $knowsSurgeryDate)
+                    .font(.subheadline)
+                if knowsSurgeryDate {
+                    DatePicker(
+                        selectedStage.promptedDateLabel,
+                        selection: $surgeryDate,
+                        displayedComponents: .date
+                    )
+                    .font(.subheadline)
+                }
+                Text("Optional, but it lets J-Pouch move you between stages on its own instead of waiting for you to update it.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.horizontal)
+    }
+
+    private var stagedSurgeryDateValue: Date? {
+        guard knowsSurgeryDate, selectedStage.promptedDate == .stagedSurgery else { return nil }
+        return surgeryDate
+    }
+
+    private var takedownDateValue: Date? {
+        guard knowsSurgeryDate, selectedStage.promptedDate == .takedown else { return nil }
+        return surgeryDate
     }
 
     // MARK: - Medications
@@ -332,7 +362,16 @@ struct OnboardingView: View {
     }
 
     private func finishOnboarding() {
-        let profile = UserProfile(stage: selectedStage, dailyHydrationTargetML: hydrationTargetML)
+        let profile = UserProfile(
+            manualStage: Stage.override(
+                forPicked: selectedStage,
+                stagedSurgeryDate: stagedSurgeryDateValue,
+                takedownDate: takedownDateValue
+            ),
+            stagedSurgeryDate: stagedSurgeryDateValue,
+            takedownDate: takedownDateValue,
+            dailyHydrationTargetML: hydrationTargetML
+        )
         modelContext.insert(profile)
 
         if takingMedications {

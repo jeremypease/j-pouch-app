@@ -13,3 +13,7 @@ let testToday = testCalendar.startOfDay(for: Date(timeIntervalSince1970: 1_700_0
 func testDaysAgo(_ offset: Int) -> Date {
     testCalendar.date(byAdding: .day, value: -offset, to: testToday)!
 }
+
+func testDaysAhead(_ offset: Int) -> Date {
+    testCalendar.date(byAdding: .day, value: offset, to: testToday)!
+}

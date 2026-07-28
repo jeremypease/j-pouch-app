@@ -3,6 +3,8 @@ import SwiftData
 
 @Model
 final class UserProfile {
+    /// Used to pick deterministically when CloudKit sync has produced more than one profile.
+    var createdAt: Date = Date.now
     /// Set only when the user has overridden the date-derived stage; nil means "follow the dates".
     var manualStageRawValue: String?
     var stagedSurgeryDate: Date?
@@ -21,8 +23,20 @@ final class UserProfile {
             ?? .preOp
     }
 
-    init(stage: Stage = .preOp, dailyHydrationTargetML: Int = 2000) {
-        self.manualStageRawValue = stage.rawValue
+    /// Takes the override explicitly rather than a plain stage. The previous initializer set an
+    /// override unconditionally, which pinned every new user to whatever they picked during
+    /// onboarding and meant the date-based derivation never ran for anyone.
+    init(
+        manualStage: Stage? = nil,
+        stagedSurgeryDate: Date? = nil,
+        takedownDate: Date? = nil,
+        dailyHydrationTargetML: Int = 2000,
+        createdAt: Date = .now
+    ) {
+        self.manualStageRawValue = manualStage?.rawValue
+        self.stagedSurgeryDate = stagedSurgeryDate
+        self.takedownDate = takedownDate
         self.dailyHydrationTargetML = dailyHydrationTargetML
+        self.createdAt = createdAt
     }
 }
