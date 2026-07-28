@@ -45,6 +45,13 @@ BUILD_DIR=build
 ARCHIVE="$BUILD_DIR/JPouch.xcarchive"
 EXPORT_DIR="$BUILD_DIR/export"
 
+# Keep a full log. xcodebuild's final summary is just "Archiving project ... (1 failure)",
+# which says nothing about the cause, and the useful line is usually thousands of lines back.
+mkdir -p "$BUILD_DIR"
+LOG="$BUILD_DIR/release-$(date +%Y%m%d-%H%M%S).log"
+exec > >(tee "$LOG") 2>&1
+trap 'echo; echo "Full log: $LOG"; echo "Likely cause:"; grep -E "error:|No profiles|entitlement|iCloud|Provisioning" "$LOG" | tail -20' EXIT
+
 AUTH=(
   -authenticationKeyPath "$KEY_PATH"
   -authenticationKeyID "$ASC_KEY_ID"
