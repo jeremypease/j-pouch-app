@@ -34,7 +34,7 @@ struct OnboardingView: View {
     @State private var hydrationTargetML = 2000
     @State private var hasCustomizedTarget = false
     @State private var isConnectingHealth = false
-    @State private var didAttemptHealthConnect = false
+    @State private var weightLookupMessage: String?
 
     private var suggestedHydrationTargetML: Int {
         // Rough starting point, not a medical recommendation: ~15 mL per lb (~33 mL/kg,
@@ -191,6 +191,23 @@ struct OnboardingView: View {
                 Label("Connected to Apple Health", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .font(.subheadline)
+
+                // Connecting and reading the weight can fail independently, so being
+                // connected must not be a dead end when the value didn't come through.
+                if !weightFromHealth {
+                    Button {
+                        Task { await loadWeightFromHealth() }
+                    } label: {
+                        if isConnectingHealth {
+                            ProgressView()
+                        } else {
+                            Text("Use My Weight from Health")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(isConnectingHealth)
+                }
             } else if healthKit.connectionState == .unavailable {
                 Text("Apple Health isn't available on this device.")
                     .font(.caption)
@@ -213,8 +230,8 @@ struct OnboardingView: View {
                 .disabled(isConnectingHealth)
             }
 
-            if didAttemptHealthConnect && !weightFromHealth {
-                Text("No weight found in Health — enter yours below.")
+            if let weightLookupMessage {
+                Text(weightLookupMessage)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -269,16 +286,38 @@ struct OnboardingView: View {
         isConnectingHealth = true
         Task {
             await healthKit.requestAuthorization()
+
+            // Read the weight before asking about medications. That request presents its own
+            // per-object sheet, and on iOS 26 the read grant is itself a two-sheet flow
+            // (access, then how much history to share) — querying while sheets are still
+            // coming and going returned nothing. Taking the value first, while we know the
+            // read grant just settled, is both more reliable and better ordered.
+            await loadWeightFromHealth()
+
             if healthKit.supportsMedicationsAPI {
                 await healthKit.requestMedicationsAuthorization()
             }
-            if let kg = try? await healthKit.latestBodyMassKG() {
-                weightLb = (kg * 2.20462).rounded()
-                weightFromHealth = true
-                knowsWeight = true
-            }
-            didAttemptHealthConnect = true
             isConnectingHealth = false
+        }
+    }
+
+    private func loadWeightFromHealth() async {
+        isConnectingHealth = true
+        defer { isConnectingHealth = false }
+        do {
+            guard let kg = try await healthKit.latestBodyMassKG() else {
+                weightLookupMessage = "No weight found in Health — enter yours below."
+                return
+            }
+            weightLb = (kg * 2.20462).rounded()
+            weightFromHealth = true
+            knowsWeight = true
+            weightLookupMessage = nil
+        } catch {
+            // Distinct from having no data: a failed read is retryable, and telling someone
+            // their weight isn't in Health when the query simply failed sends them off to
+            // check the wrong thing.
+            weightLookupMessage = "Couldn't read your weight from Health just now. Tap to try again, or enter it below."
         }
     }
 
