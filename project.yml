@@ -62,6 +62,9 @@ targets:
           PLIST="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
           [ -f "$PLIST" ] || exit 0
           # Commit count only ever increases, which is exactly what App Store Connect wants.
+          # If CI is ever added, it must do a full clone: a shallow one (--depth 1) counts
+          # only the commits it fetched, which would go backwards and collide with a build
+          # already uploaded.
           # If git isn't available (e.g. building from an exported source drop), leave the
           # value from project.yml rather than failing the build.
           if BUILD_NUMBER=$(git -C "$SRCROOT" rev-list --count HEAD 2>/dev/null) && [ -n "$BUILD_NUMBER" ]; then
