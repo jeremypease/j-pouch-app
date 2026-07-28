@@ -33,7 +33,16 @@ fi
 # Tests first, and unlike the review these DO block. A failing test is a deterministic,
 # unambiguous signal — exactly what the model verdict turned out not to be.
 if command -v xcodegen >/dev/null 2>&1 && [ -f project.yml ]; then
-    XCODE_DIR=${DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}
+    # Prefer a released Xcode over the beta. App Store Connect rejects anything built with a
+    # beta SDK, so once a stable Xcode is installed it should become the default everywhere
+    # rather than only being remembered at archive time.
+    if [ -n "${DEVELOPER_DIR:-}" ]; then
+        XCODE_DIR="$DEVELOPER_DIR"
+    elif [ -d /Applications/Xcode.app/Contents/Developer ]; then
+        XCODE_DIR=/Applications/Xcode.app/Contents/Developer
+    else
+        XCODE_DIR=/Applications/Xcode-beta.app/Contents/Developer
+    fi
     if [ -d "$XCODE_DIR" ]; then
         echo "pre-push: running tests..." >&2
         xcodegen generate >/dev/null 2>&1
