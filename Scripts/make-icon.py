@@ -26,8 +26,10 @@ STEM_BOTTOM = ARC_CENTRE[1]              # 610
 ARC_LEFT_END = (ARC_CENTRE[0] - ARC_RADIUS, ARC_CENTRE[1])
 ARC_RIGHT_END = (STEM_X, ARC_CENTRE[1])
 
-TOP_COLOUR = (12, 74, 110)      # deep blue-teal
-BOTTOM_COLOUR = (20, 166, 155)  # brighter teal
+# Blue into green, on a diagonal. Jeremy's reference icon used this pairing and it reads
+# warmer and less clinical than the teal it replaced.
+TOP_COLOUR = (58, 122, 176)     # soft blue
+BOTTOM_COLOUR = (116, 179, 116) # soft green
 MARK_COLOUR = (255, 255, 255)
 
 
@@ -56,15 +58,17 @@ def build():
     rows = []
     for y in range(SIZE):
         py = y + 0.5
-        t = y / (SIZE - 1)
-        bg = tuple(
-            int(round(TOP_COLOUR[i] + (BOTTOM_COLOUR[i] - TOP_COLOUR[i]) * t))
-            for i in range(3)
-        )
+        # Diagonal rather than straight down, so the two hues both get real estate.
+        t_row = y / (SIZE - 1)
         row = bytearray()
         row.append(0)  # PNG filter type: none
         for x in range(SIZE):
             px = x + 0.5
+            t = (x / (SIZE - 1)) * 0.45 + t_row * 0.55
+            bg = tuple(
+                int(round(TOP_COLOUR[i] + (BOTTOM_COLOUR[i] - TOP_COLOUR[i]) * t))
+                for i in range(3)
+            )
             distance = min(distance_to_stem(px, py), distance_to_arc(px, py))
             # One pixel of feathering either side of the edge gives a clean edge without
             # the shape looking soft.
