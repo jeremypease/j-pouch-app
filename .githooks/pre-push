@@ -46,10 +46,30 @@ if command -v xcodegen >/dev/null 2>&1 && [ -f project.yml ]; then
     if [ -d "$XCODE_DIR" ]; then
         echo "pre-push: running tests..." >&2
         xcodegen generate >/dev/null 2>&1
+
+        # Pick a simulator matching the SDK this Xcode actually ships, rather than naming a
+        # device. Replacing the beta Xcode left its iOS 27 simulators behind: they still match
+        # by name and are still listed as available, but the runtime went with the beta, so
+        # booting them fails with "cannot be located on disk". Tying the choice to the SDK is
+        # the part that stays true across a toolchain change.
+        SDK_VER=$(DEVELOPER_DIR="$XCODE_DIR" xcodebuild -showsdks 2>/dev/null \
+            | sed -n 's/.*-sdk iphonesimulator\([0-9.]*\).*/\1/p' | head -1)
+        SIM_ID=$(DEVELOPER_DIR="$XCODE_DIR" xcodebuild -project JPouch.xcodeproj -scheme JPouch \
+            -showdestinations 2>/dev/null \
+            | grep "platform:iOS Simulator" | grep "OS:${SDK_VER}" | grep "name:iPhone" \
+            | sed -n 's/.*id:\([0-9A-Fa-f-]\{36\}\).*/\1/p' | head -1)
+
+        if [ -z "$SIM_ID" ]; then
+            echo "pre-push: no iPhone simulator matching SDK ${SDK_VER:-unknown}, skipping tests." >&2
+            SKIP_TESTS=1
+        fi
+
         TEST_LOG=$(mktemp)
-        if DEVELOPER_DIR="$XCODE_DIR" xcodebuild test \
+        if [ -n "${SKIP_TESTS:-}" ]; then
+            rm -f "$TEST_LOG"
+        elif DEVELOPER_DIR="$XCODE_DIR" xcodebuild test \
             -project JPouch.xcodeproj -scheme JPouch \
-            -destination "platform=iOS Simulator,name=iPhone 17" \
+            -destination "id=$SIM_ID" \
             CODE_SIGNING_ALLOWED=NO >"$TEST_LOG" 2>&1; then
             echo "pre-push: tests passed." >&2
             rm -f "$TEST_LOG"
