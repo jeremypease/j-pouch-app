@@ -22,7 +22,7 @@ struct SettingsView: View {
         case .notConnected:
             return "J-Pouch can read your weight to suggest a hydration target, and save the water you log back to Health.\(medications)"
         case .connected:
-            return "Apple doesn't let apps see which reading permissions you granted, or switch them off from here. To change or revoke what J-Pouch can see, open Health → Profile → Apps → J-Pouch.\(medications)"
+            return "Apple doesn't let apps see which reading permissions you granted, or switch them off from here — and it doesn't provide a way to link straight to the right page. In the Health app, tap your profile picture at the top right, then Apps, then J-Pouch.\(medications)"
         }
     }
 
@@ -94,7 +94,12 @@ struct SettingsView: View {
                     )
                 }
                 Section {
-                    LabeledContent("Status") {
+                    // Plain HStack rather than LabeledContent: giving LabeledContent a custom
+                    // content view (rather than a plain value) made the row grow to an odd
+                    // height, leaving a large empty gap under the status.
+                    HStack {
+                        Text("Status")
+                        Spacer()
                         switch healthKit.connectionState {
                         case .unknown:
                             Text("Checking…").foregroundStyle(.secondary)
@@ -110,8 +115,16 @@ struct SettingsView: View {
 
                     switch healthKit.connectionState {
                     case .connected:
-                        LabeledContent("Saving water to Health", value: healthKit.canWriteWater ? "On" : "Off")
-                        Button("Manage in Health App") {
+                        HStack {
+                            Text("Saving water to Health")
+                            Spacer()
+                            Text(healthKit.canWriteWater ? "On" : "Off")
+                                .foregroundStyle(.secondary)
+                        }
+                        // Named for what it actually does. Apple publishes no deep link to a
+                        // specific app's Health permissions, so this lands on the Health home
+                        // screen — the footer gives the rest of the route.
+                        Button("Open Health App") {
                             openURL(URL(string: "x-apple-health://")!)
                         }
                     case .notConnected:

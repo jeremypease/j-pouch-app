@@ -46,13 +46,13 @@ struct LogMedicationForm: View {
                             }
                         }
                     }
-                    Button("Open Health App to Add or Edit") {
+                    Button("Open Health App") {
                         openURL(URL(string: "x-apple-health://")!)
                     }
                 } header: {
                     Text("Your Medications")
                 } footer: {
-                    Text("This is separate from the general Health connection in Settings — Apple requires picking which specific medications to share with each app, and always re-asks each time you tap Share. If you've already shared some and don't see them, try tapping Share again and check every medication you want visible here is toggled on.")
+                    Text("Medications live in the Health app, under Browse → Medications. This is separate from the general Health connection in Settings — Apple requires picking which specific medications to share with each app, and re-asks every time you tap Share. If you've already shared some and don't see them here, tap Share again and check each one you want visible is switched on.")
                 }
             }
 
