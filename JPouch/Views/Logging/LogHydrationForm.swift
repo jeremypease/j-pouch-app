@@ -44,7 +44,10 @@ struct LogHydrationForm: View {
         modelContext.insert(entry)
 
         guard kind == .water else { return }
-        Task {
+        // Explicitly main-actor rather than relying on the enclosing isolation being inferred:
+        // both the SwiftData model and the @State below have to be touched on the main actor,
+        // and a nonisolated continuation here would resume off it.
+        Task { @MainActor in
             do {
                 let sampleID = try await HealthKitManager.shared.logWater(volumeML: volumeML)
                 entry.healthKitSampleID = sampleID.uuidString

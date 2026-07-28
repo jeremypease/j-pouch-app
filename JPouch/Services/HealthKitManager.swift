@@ -24,6 +24,11 @@ enum HealthConnectionState: Equatable {
     case connected
 }
 
+/// Main-actor isolated because its `@Observable` state drives SwiftUI. Without this, the
+/// mutations in `refreshConnectionState()` happen on whatever executor the nonisolated async
+/// method resumes on, which races with SwiftUI reading the same properties on the main thread.
+/// The underlying HealthKit calls still do their work off the main thread themselves.
+@MainActor
 @Observable
 final class HealthKitManager {
     static let shared = HealthKitManager()

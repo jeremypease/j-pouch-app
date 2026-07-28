@@ -33,6 +33,25 @@ struct SettingsView: View {
         )
     }
 
+    private var storageWarningTitle: String {
+        switch PersistenceSetup.shared.mode {
+        case .cloudKit: ""
+        case .localOnly: "Not backing up to iCloud"
+        case .inMemory: "Your entries aren't being saved"
+        }
+    }
+
+    private var storageWarningDetail: String {
+        switch PersistenceSetup.shared.mode {
+        case .cloudKit:
+            ""
+        case .localOnly:
+            "J-Pouch couldn't reach iCloud, so what you log stays on this phone only and won't restore onto a new one. Check you're signed in to iCloud with iCloud Drive on, then reopen the app."
+        case .inMemory:
+            "J-Pouch couldn't open its database, so anything you log now will be lost when the app closes. Reopening the app usually fixes this. If it doesn't, please get in touch before logging anything you need to keep."
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -144,6 +163,19 @@ struct SettingsView: View {
                 } footer: {
                     Text(healthFooter)
                 }
+                if PersistenceSetup.shared.mode != .cloudKit {
+                    Section {
+                        Label(storageWarningTitle, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.subheadline)
+                        Text(storageWarningDetail)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } header: {
+                        Text("Backup")
+                    }
+                }
+
                 Section {
                     Text("J-Pouch tracks patterns to help you spot trends — it doesn't diagnose. Always bring concerns to your GI.")
                         .font(.caption)
