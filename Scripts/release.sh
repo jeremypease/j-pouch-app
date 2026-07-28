@@ -86,7 +86,7 @@ export_with_method() {
 <plist version="1.0">
 <dict>
     <key>method</key><string>$method</string>
-    <key>teamID</key><string>37GS5LK7P7</string>
+    <key>teamID</key><string>S6M9LCA6DC</string>
     <key>signingStyle</key><string>automatic</string>
     <key>uploadSymbols</key><true/>
 </dict>

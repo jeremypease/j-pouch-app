@@ -52,7 +52,10 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: 37GS5LK7P7
+        # Team ID from the paid membership, not from a certificate in the keychain — the
+        # keychain also holds a personal-team cert whose identifier looks equally plausible,
+        # and using that one made signing fail with "No Account for Team".
+        DEVELOPMENT_TEAM: S6M9LCA6DC
     postBuildScripts:
       - name: Stamp build number from git
         # Runs before code signing, so editing the built plist here is safe.
