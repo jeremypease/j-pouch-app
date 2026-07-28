@@ -116,9 +116,7 @@ struct SettingsView: View {
                     // Plain HStack rather than LabeledContent: giving LabeledContent a custom
                     // content view (rather than a plain value) made the row grow to an odd
                     // height, leaving a large empty gap under the status.
-                    HStack {
-                        Text("Status")
-                        Spacer()
+                    AdaptiveLabeledRow(label: "Status") {
                         switch healthKit.connectionState {
                         case .unknown:
                             Text("Checking…").foregroundStyle(.secondary)
@@ -134,9 +132,7 @@ struct SettingsView: View {
 
                     switch healthKit.connectionState {
                     case .connected:
-                        HStack {
-                            Text("Saving water to Health")
-                            Spacer()
+                        AdaptiveLabeledRow(label: "Saving water to Health") {
                             Text(healthKit.canWriteWater ? "On" : "Off")
                                 .foregroundStyle(.secondary)
                         }

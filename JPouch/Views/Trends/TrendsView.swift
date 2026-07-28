@@ -91,9 +91,7 @@ struct TrendsView: View {
                         Text("No entries yet.").foregroundStyle(.secondary)
                     }
                     ForEach(recentHydration) { entry in
-                        HStack {
-                            Text("\(entry.volumeML) mL \u{2022} \(entry.kind.displayName)")
-                            Spacer()
+                        AdaptiveLabeledRow(label: "\(entry.volumeML) mL \u{2022} \(entry.kind.displayName)") {
                             Text(entry.timestamp, style: .time)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)

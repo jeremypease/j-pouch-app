@@ -12,6 +12,7 @@ private struct MedicationDraft: Identifiable {
 struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private enum Step: Int, CaseIterable {
         case stage, medications, hydration
@@ -79,13 +80,19 @@ struct OnboardingView: View {
 
     private var stageStep: some View {
         VStack(spacing: 24) {
+            // At accessibility sizes the full-size header consumed most of the screen and
+            // pushed every stage past the fold — including the one selected by default, so
+            // there was no visible sign of what tapping Continue would choose. The cards
+            // below each carry their own description, so the standfirst is the part to drop.
             VStack(spacing: 8) {
                 Text("Welcome to J-Pouch")
-                    .font(.largeTitle.bold())
-                Text("Tell us where you are in your journey so we only ask you about what's relevant right now.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                    .font(dynamicTypeSize.isAccessibilitySize ? .title3.bold() : .largeTitle.bold())
+                if !dynamicTypeSize.isAccessibilitySize {
+                    Text("Tell us where you are in your journey so we only ask you about what's relevant right now.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
 
             VStack(spacing: 12) {
@@ -106,12 +113,19 @@ struct OnboardingView: View {
                             if selectedStage == stage {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.tint)
+                                    // The trait below already conveys this; without hiding it
+                                    // VoiceOver reads a redundant "checkmark circle fill".
+                                    .accessibilityHidden(true)
                             }
                         }
                         .padding()
                         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
+                    // Selection was conveyed only by the checkmark, so VoiceOver gave no way
+                    // to tell which stage was chosen.
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(selectedStage == stage ? [.isButton, .isSelected] : .isButton)
                 }
             }
 
