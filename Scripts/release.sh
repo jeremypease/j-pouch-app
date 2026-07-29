@@ -50,7 +50,7 @@ EXPORT_DIR="$BUILD_DIR/export"
 mkdir -p "$BUILD_DIR"
 LOG="$BUILD_DIR/release-$(date +%Y%m%d-%H%M%S).log"
 exec > >(tee "$LOG") 2>&1
-trap 'echo; echo "Full log: $LOG"; echo "Likely cause:"; grep -E "error:|No profiles|entitlement|iCloud|Provisioning" "$LOG" | tail -20' EXIT
+trap 'status=$?; echo; echo "Full log: $LOG"; if [ "$status" -ne 0 ]; then echo "Likely cause:"; grep -E "error:|No profiles|entitlement|iCloud|Provisioning" "$LOG" | tail -20; fi' EXIT
 
 AUTH=(
   -authenticationKeyPath "$KEY_PATH"
@@ -76,8 +76,13 @@ BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundle
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundleShortVersionString" "$ARCHIVE/Info.plist" 2>/dev/null || echo "?")
 echo "==> Archived version $VERSION build $BUILD_NUMBER"
 
-# Xcode renamed this value; older versions want "app-store". Try the current spelling and fall
-# back rather than making the caller guess which one their Xcode expects.
+# Manual signing, using the certificate and profile made by Scripts/create-signing-assets.sh.
+# Automatic signing here asks Apple to mint them on demand ("cloud signing"), which fails on
+# this account with a permission error even though the same API key can create both directly.
+# Naming them explicitly avoids that path entirely.
+#
+# The method value was renamed between Xcode versions, so try the current spelling first and
+# fall back rather than making the caller work out which one their Xcode wants.
 export_with_method() {
   local method=$1
   cat > "$BUILD_DIR/ExportOptions.plist" <<PLIST
@@ -87,17 +92,21 @@ export_with_method() {
 <dict>
     <key>method</key><string>$method</string>
     <key>teamID</key><string>S6M9LCA6DC</string>
-    <key>signingStyle</key><string>automatic</string>
+    <key>signingStyle</key><string>manual</string>
+    <key>signingCertificate</key><string>Apple Distribution</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.jeremypease.jpouch</key><string>JPouch App Store</string>
+    </dict>
     <key>uploadSymbols</key><true/>
 </dict>
 </plist>
 PLIST
+  # Deliberately no -allowProvisioningUpdates: that is what re-enters cloud signing.
   xcodebuild -exportArchive \
     -archivePath "$ARCHIVE" \
     -exportPath "$EXPORT_DIR" \
-    -exportOptionsPlist "$BUILD_DIR/ExportOptions.plist" \
-    -allowProvisioningUpdates \
-    "${AUTH[@]}"
+    -exportOptionsPlist "$BUILD_DIR/ExportOptions.plist"
 }
 
 echo "==> Exporting .ipa"
@@ -117,6 +126,13 @@ altool_run() {
 
 echo "==> Validating before upload"
 altool_run --validate-app
+
+# Set SKIP_UPLOAD=1 to build and validate without sending anything to App Store Connect —
+# useful for checking the pipeline works without publishing a build.
+if [ -n "${SKIP_UPLOAD:-}" ]; then
+  echo "==> SKIP_UPLOAD set; stopping before upload. The .ipa is at $IPA"
+  exit 0
+fi
 
 echo "==> Uploading to App Store Connect"
 altool_run --upload-app
