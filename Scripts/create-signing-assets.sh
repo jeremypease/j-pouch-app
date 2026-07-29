@@ -16,7 +16,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-: "${ASC_KEY_ID:?Set ASC_KEY_ID}"
+if [ -f .release-env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . ./.release-env
+    set +a
+fi
+
+: "${ASC_KEY_ID:?Set ASC_KEY_ID, or put it in .release-env}"
 : "${ASC_ISSUER_ID:?Set ASC_ISSUER_ID}"
 : "${ASC_KEY_PATH:?Set ASC_KEY_PATH}"
 

@@ -31,3 +31,6 @@ Pods/
 
 # Secrets
 *.xcconfig.local
+
+# Local release credentials (IDs and key path) — never commit
+.release-env

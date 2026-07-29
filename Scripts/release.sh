@@ -24,7 +24,18 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-: "${ASC_KEY_ID:?Set ASC_KEY_ID (App Store Connect API key ID)}"
+# Read saved settings so a fresh terminal doesn't need the exports repeated. Anything already
+# exported wins, so a one-off run can still override. Gitignored: it names the key file's
+# location, and the identifiers are nobody else's business even though the .p8 itself is the
+# part that actually matters.
+if [ -f .release-env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . ./.release-env
+    set +a
+fi
+
+: "${ASC_KEY_ID:?Set ASC_KEY_ID (App Store Connect API key ID), or put it in .release-env}"
 : "${ASC_ISSUER_ID:?Set ASC_ISSUER_ID (App Store Connect issuer ID)}"
 : "${ASC_KEY_PATH:?Set ASC_KEY_PATH (path to the .p8 key file)}"
 
