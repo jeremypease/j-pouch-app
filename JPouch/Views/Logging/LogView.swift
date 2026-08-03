@@ -13,23 +13,26 @@ struct LogView: View {
 
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 0) {
                 Picker("Log type", selection: $kind) {
                     ForEach(LogKind.allCases) { kind in
                         Text(kind.rawValue).tag(kind)
                     }
                 }
                 .pickerStyle(.segmented)
-                .padding()
+                .padding(.horizontal, JP.Spacing.lg)
+                .padding(.vertical, JP.Spacing.md)
+                .background(JP.Color.pageBackground)
 
+                // No Spacer below: the output form scrolls and the rest are Forms, so each one
+                // already fills the space it's given. A Spacer here collapsed them upward and
+                // left the segmented control floating over a gap.
                 switch kind {
                 case .output: LogOutputForm()
                 case .hydration: LogHydrationForm()
                 case .food: LogFoodForm()
                 case .medication: LogMedicationForm()
                 }
-
-                Spacer()
             }
             .navigationTitle("Log")
         }

@@ -48,11 +48,10 @@ struct OnboardingView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                Text("Step \(step.rawValue + 1) of \(Step.allCases.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 24)
+            VStack(spacing: JP.Spacing.xl) {
+                StepIndicator(current: step.rawValue, total: Step.allCases.count)
+                    .padding(.top, JP.Spacing.xl)
+                    .padding(.horizontal, JP.Spacing.lg)
 
                 ScrollView {
                     switch step {
@@ -62,64 +61,43 @@ struct OnboardingView: View {
                     }
                 }
 
-                Button {
+                Button(step == .hydration ? "Finish" : "Continue") {
                     advance()
-                } label: {
-                    Text(step == .hydration ? "Finish" : "Continue")
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .padding(.horizontal)
-                .padding(.bottom, 24)
+                .buttonStyle(.jpPrimary)
+                .padding(.horizontal, JP.Spacing.lg)
+                .padding(.bottom, JP.Spacing.xl)
             }
+            .background(JP.Color.pageBackground)
         }
     }
 
     // MARK: - Stage
 
     private var stageStep: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: JP.Spacing.xl) {
             // At accessibility sizes the full-size header consumed most of the screen and
             // pushed every stage past the fold — including the one selected by default, so
             // there was no visible sign of what tapping Continue would choose. The cards
             // below each carry their own description, so the standfirst is the part to drop.
-            VStack(spacing: 8) {
+            VStack(spacing: JP.Spacing.sm) {
                 Text("Welcome to J-Pouch")
-                    .font(dynamicTypeSize.isAccessibilitySize ? .title3.bold() : .largeTitle.bold())
+                    .font(dynamicTypeSize.isAccessibilitySize ? JP.Font.title : JP.Font.displayLarge)
+                    .multilineTextAlignment(.center)
                 if !dynamicTypeSize.isAccessibilitySize {
                     Text("Tell us where you are in your journey so we only ask you about what's relevant right now.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(JP.Font.callout)
+                        .foregroundStyle(JP.Color.secondaryText)
                         .multilineTextAlignment(.center)
                 }
             }
 
-            VStack(spacing: 12) {
+            VStack(spacing: JP.Spacing.md) {
                 ForEach(Stage.allCases) { stage in
                     Button {
                         selectedStage = stage
                     } label: {
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(stage.displayName)
-                                    .font(.headline)
-                                Text(stage.summary)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.leading)
-                            }
-                            Spacer()
-                            if selectedStage == stage {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.tint)
-                                    // The trait below already conveys this; without hiding it
-                                    // VoiceOver reads a redundant "checkmark circle fill".
-                                    .accessibilityHidden(true)
-                            }
-                        }
-                        .padding()
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                        StageOption(stage: stage, isSelected: selectedStage == stage)
                     }
                     .buttonStyle(.plain)
                     // Selection was conveyed only by the checkmark, so VoiceOver gave no way
@@ -131,23 +109,22 @@ struct OnboardingView: View {
 
             // Without a date there is nothing for the app to derive from, so it would be stuck
             // on whatever was picked here until the person went looking in Settings.
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: JP.Spacing.md) {
                 Toggle("I know my \(selectedStage.promptedDateLabel.lowercased())", isOn: $knowsSurgeryDate)
-                    .font(.subheadline)
+                    .font(JP.Font.callout)
                 if knowsSurgeryDate {
                     DatePicker(
                         selectedStage.promptedDateLabel,
                         selection: $surgeryDate,
                         displayedComponents: .date
                     )
-                    .font(.subheadline)
+                    .font(JP.Font.callout)
                 }
-                Text("Optional, but it lets J-Pouch move you between stages on its own instead of waiting for you to update it.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                JPCaption("Optional, but it lets J-Pouch move you between stages on its own instead of waiting for you to update it.")
             }
+            .jpCard()
         }
-        .padding(.horizontal)
+        .padding(.horizontal, JP.Spacing.lg)
     }
 
     private var stagedSurgeryDateValue: Date? {
@@ -163,13 +140,11 @@ struct OnboardingView: View {
     // MARK: - Medications
 
     private var medicationsStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Medications")
-                    .font(.title2.bold())
-                Text("Are you currently taking any medications?")
-                    .foregroundStyle(.secondary)
-            }
+        VStack(alignment: .leading, spacing: JP.Spacing.xl) {
+            StepHeader(
+                title: "Medications",
+                subtitle: "Are you currently taking any medications?"
+            )
 
             Picker("Taking medications", selection: $takingMedications) {
                 Text("No").tag(false)
@@ -179,34 +154,30 @@ struct OnboardingView: View {
 
             if takingMedications {
                 if healthKit.supportsMedicationsAPI {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Add them in the Health app under Browse → Medications — J-Pouch will show them automatically once you connect Health on the next step, so you don't need to re-enter anything. You'll get a separate prompt there for picking which medications to share, so watch for two prompts, not one.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: JP.Spacing.md) {
+                        JPCaption("Add them in the Health app under Browse → Medications — J-Pouch will show them automatically once you connect Health on the next step, so you don't need to re-enter anything. You'll get a separate prompt there for picking which medications to share, so watch for two prompts, not one.")
                         Button("Open Health App") {
                             openURL(URL(string: "x-apple-health://")!)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.jpSecondary)
                     }
+                    .jpCard()
                 } else {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: JP.Spacing.lg) {
                         ForEach($draftMedications) { $draft in
-                            VStack(alignment: .leading, spacing: 8) {
-                                TextField("Name", text: $draft.name)
-                                    .textFieldStyle(.roundedBorder)
-                                TextField("Dosage", text: $draft.dosage)
-                                    .textFieldStyle(.roundedBorder)
-                                TextField("Schedule (e.g. twice daily)", text: $draft.schedule)
-                                    .textFieldStyle(.roundedBorder)
+                            VStack(alignment: .leading, spacing: JP.Spacing.md) {
+                                JPTextField(label: "Name", placeholder: "e.g. Ciprofloxacin", text: $draft.name)
+                                JPTextField(label: "Dosage", placeholder: "e.g. 500 mg", text: $draft.dosage)
+                                JPTextField(label: "Schedule", placeholder: "e.g. twice daily", text: $draft.schedule)
                                 Toggle("Antibiotic course", isOn: $draft.isAntibiotic)
+                                    .toggleStyle(.jpCheckbox)
                             }
-                            .padding()
-                            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                            .jpCard()
                         }
                         Button("Add Medication") {
                             draftMedications.append(MedicationDraft())
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.jpSecondary)
                     }
                     .onAppear {
                         if draftMedications.isEmpty {
@@ -216,26 +187,92 @@ struct OnboardingView: View {
                 }
             }
         }
-        .padding(.horizontal)
+        .padding(.horizontal, JP.Spacing.lg)
     }
 
     // MARK: - Hydration
 
     private var hydrationStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Hydration Target")
-                    .font(.title2.bold())
-                Text("Pouch patients often need more fluid than average. Connect Apple Health and we'll suggest a starting point from your weight\(healthKit.supportsMedicationsAPI ? " — this also lets J-Pouch show medications from Health" : "") — you can always adjust it later in Settings.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: JP.Spacing.xl) {
+            StepHeader(
+                title: "Hydration Target",
+                subtitle: "Pouch patients often need more fluid than average. Connect Apple Health and we'll suggest a starting point from your weight\(healthKit.supportsMedicationsAPI ? " — this also lets J-Pouch show medications from Health" : "") — you can always adjust it later in Settings."
+            )
+
+            healthConnectCard
+
+            if let weightLookupMessage {
+                JPCaption(weightLookupMessage)
+            }
+
+            VStack(alignment: .leading, spacing: JP.Spacing.md) {
+                Toggle("I'll enter my weight", isOn: $knowsWeight)
+                    .toggleStyle(.jpCheckbox)
+
+                if knowsWeight {
+                    Stepper("Weight: \(Int(weightLb)) lb", value: $weightLb, in: 60...400, step: 1)
+                        .font(JP.Font.body)
+                    if weightFromHealth {
+                        JPCaption("From Health — adjust if this isn't current.")
+                    }
+                    if !hasCustomizedTarget {
+                        JPCaption("Suggested target: \(suggestedHydrationTargetML) mL/day")
+                    }
+                }
+            }
+            .jpCard()
+
+            VStack(alignment: .leading, spacing: JP.Spacing.md) {
+                JPCardHeader(title: "Daily target", icon: "drop.fill")
+                JPMetric(value: "\(hydrationTargetML)", unit: "mL/day")
+                Stepper(
+                    "Daily target",
+                    value: $hydrationTargetML,
+                    in: 500...5000,
+                    step: 250
+                )
+                .labelsHidden()
+                .font(JP.Font.body)
+                JPCaption("This is a starting point, not medical advice — talk to your GI or dietitian for a number tailored to you, especially with high output.")
+            }
+            .jpCard()
+        }
+        .padding(.horizontal, JP.Spacing.lg)
+        .onChange(of: weightLb) {
+            if !hasCustomizedTarget {
+                hydrationTargetML = suggestedHydrationTargetML
+            }
+        }
+        .onChange(of: hydrationTargetML) {
+            if hydrationTargetML != suggestedHydrationTargetML {
+                hasCustomizedTarget = true
+            }
+        }
+        .task {
+            await healthKit.refreshConnectionState()
+        }
+    }
+
+    /// The Apple Health sub-step, given its own card so connecting reads as a distinct action
+    /// rather than one more control in a stack.
+    @ViewBuilder
+    private var healthConnectCard: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.md) {
+            HStack(spacing: JP.Spacing.md) {
+                JPIconCircle(systemImage: "heart.fill", tint: JP.Color.critical)
+                VStack(alignment: .leading, spacing: JP.Spacing.xs) {
+                    Text("Apple Health")
+                        .font(JP.Font.headline)
+                    if healthKit.connectionState == .connected {
+                        Label("Connected", systemImage: "checkmark.circle.fill")
+                            .font(JP.Font.caption)
+                            .foregroundStyle(JP.Color.confirmation)
+                    }
+                }
+                Spacer(minLength: 0)
             }
 
             if healthKit.connectionState == .connected {
-                Label("Connected to Apple Health", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .font(.subheadline)
-
                 // Connecting and reading the weight can fail independently, so being
                 // connected must not be a dead end when the value didn't come through.
                 if !weightFromHealth {
@@ -248,14 +285,11 @@ struct OnboardingView: View {
                             Text("Use My Weight from Health")
                         }
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.jpSecondary)
                     .disabled(isConnectingHealth)
                 }
             } else if healthKit.connectionState == .unavailable {
-                Text("Apple Health isn't available on this device.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                JPCaption("Apple Health isn't available on this device.")
             } else {
                 // Covers .unknown as well as .notConnected. Unlike Settings, showing the
                 // button before the check completes is the right default here: this is
@@ -270,60 +304,11 @@ struct OnboardingView: View {
                         Text("Connect to Apple Health")
                     }
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.jpSecondary)
                 .disabled(isConnectingHealth)
             }
-
-            if let weightLookupMessage {
-                Text(weightLookupMessage)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            Toggle("I'll enter my weight", isOn: $knowsWeight)
-
-            if knowsWeight {
-                VStack(alignment: .leading, spacing: 8) {
-                    Stepper("Weight: \(Int(weightLb)) lb", value: $weightLb, in: 60...400, step: 1)
-                    if weightFromHealth {
-                        Text("From Health — adjust if this isn't current.")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    if !hasCustomizedTarget {
-                        Text("Suggested target: \(suggestedHydrationTargetML) mL/day")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Stepper(
-                    "Daily target: \(hydrationTargetML) mL",
-                    value: $hydrationTargetML,
-                    in: 500...5000,
-                    step: 250
-                )
-                Text("This is a starting point, not medical advice — talk to your GI or dietitian for a number tailored to you, especially with high output.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
         }
-        .padding(.horizontal)
-        .onChange(of: weightLb) {
-            if !hasCustomizedTarget {
-                hydrationTargetML = suggestedHydrationTargetML
-            }
-        }
-        .onChange(of: hydrationTargetML) {
-            if hydrationTargetML != suggestedHydrationTargetML {
-                hasCustomizedTarget = true
-            }
-        }
-        .task {
-            await healthKit.refreshConnectionState()
-        }
+        .jpCard()
     }
 
     private func connectToHealth() {
@@ -399,6 +384,73 @@ struct OnboardingView: View {
                 modelContext.insert(entry)
             }
         }
+    }
+}
+
+// MARK: - Pieces
+
+private struct StepIndicator: View {
+    let current: Int
+    let total: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.sm) {
+            Text("Step \(current + 1) of \(total)")
+                .font(JP.Font.label)
+                .foregroundStyle(JP.Color.secondaryText)
+            HStack(spacing: JP.Spacing.xs) {
+                ForEach(0..<total, id: \.self) { index in
+                    Capsule()
+                        .fill(index <= current ? JP.Color.brandFill : JP.Color.separator)
+                        .frame(height: 4)
+                }
+            }
+            // The text above says the same thing, and four capsules read as noise in VoiceOver.
+            .accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct StepHeader: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.sm) {
+            Text(title).font(JP.Font.displayMedium)
+            Text(subtitle)
+                .font(JP.Font.callout)
+                .foregroundStyle(JP.Color.secondaryText)
+        }
+    }
+}
+
+private struct StageOption: View {
+    let stage: Stage
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: JP.Spacing.md) {
+            VStack(alignment: .leading, spacing: JP.Spacing.xs) {
+                Text(stage.displayName)
+                    .font(JP.Font.headline)
+                    .foregroundStyle(JP.Color.primaryText)
+                Text(stage.summary)
+                    .font(JP.Font.caption)
+                    .foregroundStyle(JP.Color.secondaryText)
+                    .multilineTextAlignment(.leading)
+            }
+            Spacer(minLength: 0)
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(JP.Color.brandFill)
+                    // The trait on the button already conveys this; without hiding it
+                    // VoiceOver reads a redundant "checkmark circle fill".
+                    .accessibilityHidden(true)
+            }
+        }
+        .jpCard(tint: isSelected ? JP.Color.brandFill : nil)
     }
 }
 

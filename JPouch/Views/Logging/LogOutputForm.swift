@@ -19,87 +19,120 @@ struct LogOutputForm: View {
     private var isBackdating: Bool { backdatedTo != nil }
 
     var body: some View {
-        Form {
-            Section {
-                Stepper("Level \(consistency) of 7", value: $consistency, in: 1...7)
-                Text(PouchConsistency.label(for: consistency))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } header: {
-                Text("Consistency")
-            } footer: {
-                Text("Loosely adapted from the Bristol Stool Scale. Pouch output tends to run looser than typical stool, so mid-range is a common baseline.")
-            }
-            Section("Urgency") {
-                Toggle("Felt urgent", isOn: $hasUrgency)
-                if hasUrgency {
-                    Stepper("Severity \(urgencySeverity) of 5", value: $urgencySeverity, in: 0...5)
-                }
-            }
-            Section("Blood") {
-                Picker("Blood", selection: $blood) {
-                    ForEach(BloodLevel.allCases) { level in
-                        Text(level.displayName).tag(level)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-            Section("Pain") {
-                Stepper("\(pain) of 5", value: $pain, in: 0...5)
-            }
-            Section {
-                Toggle("Nighttime episode", isOn: $isNight)
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: JP.Spacing.lg) {
+                consistencySection
+                urgencySection
+                bloodSection
+                painSection
+                timeSection
+                notesSection
 
-            // Collapsed by default so the common case stays a two-tap save. Catching up on a
-            // missed day matters: a day with nothing logged is a gap, and the pattern flags
-            // deliberately break their streaks across gaps rather than guess.
-            Section {
-                Toggle("This happened earlier", isOn: Binding(
-                    get: { isBackdating },
-                    set: { backdatedTo = $0 ? .now : nil }
-                ))
-                if let backdatedTo {
-                    DatePicker(
-                        "When",
-                        selection: Binding(
-                            get: { backdatedTo },
-                            set: { self.backdatedTo = $0 }
-                        ),
-                        in: ...Date.now,
-                        displayedComponents: [.date, .hourAndMinute]
-                    )
-                }
-            } header: {
-                Text("Time")
-            } footer: {
-                Text(isBackdating ? "" : "Saves with the current time.")
+                Button("Save Entry") { save() }
+                    .buttonStyle(.jpPrimary)
+                    .padding(.top, JP.Spacing.sm)
             }
-
-            Section("Notes") {
-                TextField("Anything worth remembering", text: $notes, axis: .vertical)
-            }
-
-            Section {
-                Button {
-                    save()
-                } label: {
-                    Text("Save Entry").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .listRowBackground(Color.clear)
+            .padding(JP.Spacing.lg)
         }
-        .overlay(alignment: .top) {
-            if didSave {
-                Text("Saved")
-                    .font(.caption.bold())
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(.green.opacity(0.2), in: Capsule())
-                    .padding(.top, 8)
+        .background(JP.Color.pageBackground)
+        .jpSaveConfirmation(isShowing: didSave)
+    }
+
+    private var consistencySection: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.md) {
+            JPCardHeader(title: "Consistency", icon: "circle.lefthalf.filled")
+            JPMetric(value: "\(consistency)", unit: "of 7")
+            Stepper("Consistency level", value: $consistency, in: 1...7)
+                .labelsHidden()
+                .font(JP.Font.body)
+            Text(PouchConsistency.label(for: consistency))
+                .font(JP.Font.calloutMedium)
+                .foregroundStyle(JP.Color.primaryText)
+            JPCaption("Loosely adapted from the Bristol Stool Scale. Pouch output tends to run looser than typical stool, so mid-range is a common baseline.")
+        }
+        .jpCard()
+    }
+
+    private var urgencySection: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.md) {
+            JPCardHeader(title: "Urgency", icon: "timer")
+            Toggle("Felt urgent", isOn: $hasUrgency)
+                .toggleStyle(.jpCheckbox)
+            if hasUrgency {
+                Stepper("Severity \(urgencySeverity) of 5", value: $urgencySeverity, in: 0...5)
+                    .font(JP.Font.body)
             }
         }
+        .jpCard()
+    }
+
+    private var bloodSection: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.md) {
+            JPCardHeader(title: "Blood", icon: "drop.triangle")
+            JPTagPicker(
+                options: BloodLevel.allCases,
+                title: \.displayName,
+                tint: blood == .none ? JP.Color.accent : JP.Color.attention,
+                selection: $blood
+            )
+        }
+        .jpCard()
+    }
+
+    private var painSection: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.md) {
+            JPCardHeader(title: "Pain", icon: "bolt.heart")
+            JPMetric(value: "\(pain)", unit: "of 5")
+            Stepper("Pain level", value: $pain, in: 0...5)
+                .labelsHidden()
+                .font(JP.Font.body)
+            Toggle("Nighttime episode", isOn: $isNight)
+                .toggleStyle(.jpCheckbox)
+        }
+        .jpCard()
+    }
+
+    // Collapsed by default so the common case stays a two-tap save. Catching up on a missed
+    // day matters: a day with nothing logged is a gap, and the pattern flags deliberately
+    // break their streaks across gaps rather than guess.
+    private var timeSection: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.md) {
+            JPCardHeader(title: "Time", icon: "clock")
+            Toggle("This happened earlier", isOn: Binding(
+                get: { isBackdating },
+                set: { backdatedTo = $0 ? .now : nil }
+            ))
+            .toggleStyle(.jpCheckbox)
+
+            if let backdatedTo {
+                DatePicker(
+                    "When",
+                    selection: Binding(
+                        get: { backdatedTo },
+                        set: { self.backdatedTo = $0 }
+                    ),
+                    in: ...Date.now,
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+                .font(JP.Font.body)
+            } else {
+                JPCaption("Saves with the current time.")
+            }
+        }
+        .jpCard()
+    }
+
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.md) {
+            JPCardHeader(title: "Notes", icon: "square.and.pencil")
+            JPTextField(
+                label: "Anything worth remembering",
+                placeholder: "Optional",
+                axis: .vertical,
+                text: $notes
+            )
+        }
+        .jpCard()
     }
 
     private func save() {
@@ -122,7 +155,7 @@ struct LogOutputForm: View {
         withAnimation { didSave = true }
         Task {
             try? await Task.sleep(for: .seconds(1.2))
-            didSave = false
+            withAnimation { didSave = false }
         }
     }
 }
