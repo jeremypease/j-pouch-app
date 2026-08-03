@@ -45,21 +45,33 @@ struct RootView: View {
     }
 }
 
+/// The app's tabs, named so Home can send someone to Settings without reaching for a second
+/// `NavigationStack` — nesting one inside a tab's own stack loses the navigation bar and the
+/// back gesture.
+enum MainTab: Hashable {
+    case home, log, trends, settings
+}
+
 struct MainTabView: View {
     let profile: UserProfile
 
     @Query private var medications: [MedicationEntry]
+    @State private var selectedTab: MainTab = .home
 
     var body: some View {
-        TabView {
-            HomeView(profile: profile)
+        TabView(selection: $selectedTab) {
+            HomeView(profile: profile, selectedTab: $selectedTab)
                 .tabItem { Label("Home", systemImage: "house") }
+                .tag(MainTab.home)
             LogView()
                 .tabItem { Label("Log", systemImage: "plus.circle") }
+                .tag(MainTab.log)
             TrendsView(profile: profile)
                 .tabItem { Label("Trends", systemImage: "chart.xyaxis.line") }
+                .tag(MainTab.trends)
             SettingsView(profile: profile)
                 .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tag(MainTab.settings)
         }
         .task {
             // Rebuild reminders at launch so finished courses stop firing even though nothing

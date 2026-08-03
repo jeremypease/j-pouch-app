@@ -1,0 +1,60 @@
+# Builds and tests the iOS app.
+#
+# Replaces GitHub's stock Swift starter workflow, which ran `swift build`/`swift test`.
+# Those need a Package.swift; this repo is an xcodegen-generated Xcode app project and has
+# never had one, so that workflow could not pass on any branch.
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    # Pinned rather than macos-latest: the HealthKit Medications integration
+    # (HKUserAnnotatedMedication) only exists in the iOS 26 SDK and won't compile against
+    # anything older.
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full clone, not the default shallow one. The build number is stamped from
+          # `git rev-list --count HEAD` in project.yml's postBuildScript, and a shallow clone
+          # counts only the commits it fetched — which would go backwards and collide with a
+          # build already uploaded to App Store Connect.
+          fetch-depth: 0
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      # Device names vary between runner images, so discover one rather than hardcoding a
+      # name that silently resolves to "My Mac" when it doesn't exist.
+      - name: Pick a simulator
+        id: sim
+        run: |
+          set -euo pipefail
+          udid=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          runtimes = json.load(sys.stdin)["devices"]
+          for runtime in sorted(runtimes, reverse=True):
+              for device in runtimes[runtime]:
+                  if device["name"].startswith("iPhone"):
+                      print(device["udid"])
+                      sys.exit(0)
+          sys.exit("No iPhone simulator available on this runner")
+          ')
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+
+      - name: Build and test
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -scheme JPouch \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            CODE_SIGNING_ALLOWED=NO

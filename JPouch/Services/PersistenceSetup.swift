@@ -32,6 +32,7 @@ struct PersistenceSetup {
         HydrationEntry.self,
         FoodEntry.self,
         MedicationEntry.self,
+        SymptomEntry.self,
     ])
 
     private static func make() -> PersistenceSetup {
