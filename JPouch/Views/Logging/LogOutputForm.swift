@@ -42,9 +42,13 @@ struct LogOutputForm: View {
         VStack(alignment: .leading, spacing: JP.Spacing.md) {
             JPCardHeader(title: "Consistency", icon: "circle.lefthalf.filled")
             JPMetric(value: "\(consistency)", unit: "of 7")
+            // The visible figure lives in JPMetric above, so the Stepper's own label carries no
+            // value. Without this, VoiceOver announces "Consistency level, adjustable" and the
+            // current setting has to be hunted for elsewhere in the swipe order.
             Stepper("Consistency level", value: $consistency, in: 1...7)
                 .labelsHidden()
                 .font(JP.Font.body)
+                .accessibilityValue("\(consistency) of 7, \(PouchConsistency.label(for: consistency))")
             Text(PouchConsistency.label(for: consistency))
                 .font(JP.Font.calloutMedium)
                 .foregroundStyle(JP.Color.primaryText)
@@ -86,6 +90,7 @@ struct LogOutputForm: View {
             Stepper("Pain level", value: $pain, in: 0...5)
                 .labelsHidden()
                 .font(JP.Font.body)
+                .accessibilityValue("\(pain) of 5")
             Toggle("Nighttime episode", isOn: $isNight)
                 .toggleStyle(.jpCheckbox)
         }

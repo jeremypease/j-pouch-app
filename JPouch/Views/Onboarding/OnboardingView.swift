@@ -233,6 +233,9 @@ struct OnboardingView: View {
                 )
                 .labelsHidden()
                 .font(JP.Font.body)
+                // The figure is shown by JPMetric above, so the Stepper needs the value spelled
+                // out for VoiceOver or it announces only "Daily target, adjustable".
+                .accessibilityValue("\(hydrationTargetML) mL per day")
                 JPCaption("This is a starting point, not medical advice — talk to your GI or dietitian for a number tailored to you, especially with high output.")
             }
             .jpCard()

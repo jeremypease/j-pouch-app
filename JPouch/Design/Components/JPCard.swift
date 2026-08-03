@@ -79,6 +79,9 @@ struct JPMetric: View {
                     .foregroundStyle(JP.Color.secondaryText)
             }
         }
+        // Combined so the figure and its unit are one VoiceOver stop ("7 of 7") rather than
+        // two disconnected ones.
+        .accessibilityElement(children: .combine)
     }
 }
 
