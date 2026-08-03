@@ -119,11 +119,11 @@ struct SettingsView: View {
                     AdaptiveLabeledRow(label: "Status") {
                         switch healthKit.connectionState {
                         case .unknown:
-                            Text("Checking…").foregroundStyle(.secondary)
+                            Text("Checking…").foregroundStyle(JPouchColor.textSecondary)
                         case .unavailable:
-                            Text("Unavailable").foregroundStyle(.secondary)
+                            Text("Unavailable").foregroundStyle(JPouchColor.textSecondary)
                         case .notConnected:
-                            Text("Not connected").foregroundStyle(.secondary)
+                            Text("Not connected").foregroundStyle(JPouchColor.textSecondary)
                         case .connected:
                             Label("Connected", systemImage: "checkmark.circle.fill")
                                 .foregroundStyle(.green)
@@ -134,7 +134,7 @@ struct SettingsView: View {
                     case .connected:
                         AdaptiveLabeledRow(label: "Saving water to Health") {
                             Text(healthKit.canWriteWater ? "On" : "Off")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(JPouchColor.textSecondary)
                         }
                         // Named for what it actually does. Apple publishes no deep link to a
                         // specific app's Health permissions, so this lands on the Health home
@@ -162,11 +162,11 @@ struct SettingsView: View {
                 if PersistenceSetup.shared.mode != .cloudKit {
                     Section {
                         Label(storageWarningTitle, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                            .font(.subheadline)
+                            .foregroundStyle(JPouchColor.warning)
+                            .font(JPouchFont.bodySM)
                         Text(storageWarningDetail)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(JPouchFont.bodyXS)
+                            .foregroundStyle(JPouchColor.textSecondary)
                     } header: {
                         Text("Backup")
                     }
@@ -174,8 +174,8 @@ struct SettingsView: View {
 
                 Section {
                     Text("J-Pouch tracks patterns to help you spot trends — it doesn't diagnose. Always bring concerns to your GI.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(JPouchFont.bodyXS)
+                        .foregroundStyle(JPouchColor.textSecondary)
                 }
             }
             .navigationTitle("Settings")

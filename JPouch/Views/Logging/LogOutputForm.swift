@@ -23,8 +23,8 @@ struct LogOutputForm: View {
             Section {
                 Stepper("Level \(consistency) of 7", value: $consistency, in: 1...7)
                 Text(PouchConsistency.label(for: consistency))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.bodyXS)
+                    .foregroundStyle(JPouchColor.textSecondary)
             } header: {
                 Text("Consistency")
             } footer: {
@@ -93,10 +93,12 @@ struct LogOutputForm: View {
         .overlay(alignment: .top) {
             if didSave {
                 Text("Saved")
-                    .font(.caption.bold())
+                    .font(JPouchFont.bodyXS)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(JPouchColor.textOnAccent)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(.green.opacity(0.2), in: Capsule())
+                    .background(JPouchColor.successSoft, in: Capsule())
                     .padding(.top, 8)
             }
         }

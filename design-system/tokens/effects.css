@@ -1,0 +1,15 @@
+:root{
+--shadow-xs:0 1px 2px rgba(28,33,31,0.06);
+--shadow-sm:0 2px 6px rgba(28,33,31,0.07);
+--shadow-md:0 6px 20px rgba(28,33,31,0.09);
+--shadow-lg:0 16px 40px rgba(28,33,31,0.12);
+--shadow-focus:0 0 0 3px var(--teal-200);
+--shadow-inset:inset 0 1px 2px rgba(28,33,31,0.06);
+
+--ease-standard:cubic-bezier(.4,0,.2,1);/* @kind other */
+--ease-out:cubic-bezier(0,0,.2,1);/* @kind other */
+--ease-spring:cubic-bezier(.34,1.2,.64,1);/* @kind other */
+--duration-fast:120ms;/* @kind other */--duration-normal:200ms;/* @kind other */--duration-slow:320ms;/* @kind other */
+
+--blur-glass:14px;
+}

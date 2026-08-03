@@ -1,0 +1,10 @@
+<!-- @dsCard group="Spacing" viewport="700x140" name="Motion" subtitle="120–200ms ease-out fades; no ambient loops" -->
+<html><head><link rel="stylesheet" href="../styles.css"><style>
+body{margin:0;padding:20px;font-family:var(--font-body);font-size:13px;color:var(--color-text-secondary);display:flex;gap:20px;align-items:center}
+.chip{padding:10px 16px;background:var(--color-primary);color:#fff;border-radius:var(--radius-button);animation:pulse 2.4s var(--ease-out) infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(0.96)}}
+</style></head>
+<body>
+<div class="chip">Log output</div>
+<div>fast 120ms · normal 200ms · slow 320ms<br/>ease-out for enter/exit · spring reserved for milestones only</div>
+</body></html>

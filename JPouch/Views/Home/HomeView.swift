@@ -22,11 +22,16 @@ struct HomeView: View {
         return PatternAnalyzer.analyze(summaries: summaries, hydrationTargetML: profile.dailyHydrationTargetML)
     }
 
-    /// Pattern flags are relevant from the first surgery onward — dehydration is a real risk
-    /// with a high-output ileostomy too, and pouchitis risk is lifelong rather than something
-    /// that only starts once someone is years out.
+    /// The flag logic (consistency scale, output-frequency baseline) is shaped around pouch
+    /// output specifically, so it doesn't mean the same thing for a staged-surgery stoma —
+    /// which is exactly why the stage switch below already leaves `PatternStatusCard` and
+    /// `OutputSummaryCard` out for `.stagedSurgery`. This used to only gate on `.preOp`, so a
+    /// stagedSurgery ileostomy user could still see a pouch-shaped flare/dehydration flag even
+    /// though the rest of the pattern UI already knew better than to show them anything.
+    /// Matching this gate to that same set closes the gap without changing what those two
+    /// stages show. Ileostomy-aware tracking is real future work, not something to fake here.
     private var showsPatternFlags: Bool {
-        profile.stage != .preOp
+        profile.stage == .adaptation || profile.stage == .longTermMaintenance
     }
 
     var body: some View {
@@ -34,12 +39,14 @@ struct HomeView: View {
             ScrollView {
                 let analysis = patternAnalysis
 
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: JPouchSpace.s5) {
                     Text(profile.stage.displayName)
-                        .font(.caption.bold())
+                        .font(JPouchFont.bodyXS)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(JPouchColor.textOnAccent)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(.tint.opacity(0.15), in: Capsule())
+                        .background(JPouchColor.primarySoft, in: Capsule())
 
                     if showsPatternFlags {
                         if case .flagged(let days) = analysis.flare {
@@ -67,8 +74,9 @@ struct HomeView: View {
                         HydrationCard(currentML: todaysHydrationML, targetML: profile.dailyHydrationTargetML)
                     }
                 }
-                .padding()
+                .padding(JPouchSpace.s5)
             }
+            .background(JPouchColor.background)
             .navigationTitle("J-Pouch")
         }
     }
@@ -86,17 +94,11 @@ private struct FlagCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label(title, systemImage: icon)
-                .font(.headline)
-                .foregroundStyle(.orange)
+                .font(JPouchFont.displayLG)
+                .foregroundStyle(JPouchColor.warning)
             content
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(.orange.opacity(0.35))
-        )
+        .jpouchFlagCard()
     }
 }
 
@@ -106,10 +108,10 @@ private struct DehydrationFlagCard: View {
     var body: some View {
         FlagCard(title: "Hydration worth watching", icon: "drop.triangle") {
             Text("For the last \(consecutiveDays) days your output has run above your usual while fluids stayed under your daily target. That combination is what tends to lead toward dehydration.")
-                .font(.callout)
+                .font(JPouchFont.bodyMD)
             Text("Electrolyte drinks often help more than water alone. If you're feeling lightheaded, unusually tired, or your urine is dark, contact your care team.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(JPouchFont.bodyXS)
+                .foregroundStyle(JPouchColor.textSecondary)
         }
     }
 }
@@ -120,10 +122,10 @@ private struct FlareFlagCard: View {
     var body: some View {
         FlagCard(title: "This looks different from your normal", icon: "waveform.path.ecg") {
             Text("Over the last \(consecutiveDays) days your output has been well above your own baseline with blood present.")
-                .font(.callout)
+                .font(JPouchFont.bodyMD)
             Text("J-Pouch can't tell you what's causing this — it only notices that it's different for you. This is worth bringing to your GI.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(JPouchFont.bodyXS)
+                .foregroundStyle(JPouchColor.textSecondary)
         }
     }
 }
@@ -154,25 +156,23 @@ private struct PatternStatusCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Pattern Status", systemImage: "waveform.path.ecg")
-                .font(.headline)
+                .font(JPouchFont.displayLG)
 
             if isFlagged {
                 Text("See the flags above. Keep logging — it's what makes these more accurate.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.bodyXS)
+                    .foregroundStyle(JPouchColor.textSecondary)
             } else if let building = buildingBaseline {
                 Text("Still learning what's normal for you — \(building.loggedDays) of \(building.daysNeeded) days logged. J-Pouch won't flag anything until it knows your baseline, since \"normal\" varies a lot between people.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.bodyXS)
+                    .foregroundStyle(JPouchColor.textSecondary)
             } else if let baseline = analysis.baselineOutputPerDay {
                 Text("Nothing looks unusual against your recent baseline of about \(baseline, format: .number.precision(.fractionLength(0))) a day.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.bodyXS)
+                    .foregroundStyle(JPouchColor.textSecondary)
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .jpouchCard()
     }
 }
 
@@ -189,16 +189,14 @@ private struct HydrationCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Hydration").font(.headline)
+            Text("Hydration").font(JPouchFont.displayLG)
             ProgressView(value: progress)
-                .tint(.blue)
+                .tint(JPouchColor.primary)
             Text("\(currentML) mL of \(targetML) mL today")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(JPouchFont.monoXS)
+                .foregroundStyle(JPouchColor.textSecondary)
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .jpouchCard()
     }
 }
 
@@ -208,18 +206,17 @@ private struct OutputSummaryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Output Today").font(.headline)
+            Text("Output Today").font(JPouchFont.displayLG)
             Text("\(count) logged")
-                .font(.title2.bold())
+                .font(JPouchFont.mono(26, weight: .bold))
+                .foregroundStyle(JPouchColor.textPrimary)
             if let baseline {
                 Text("Your usual is about \(baseline, format: .number.precision(.fractionLength(0))) a day.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.bodyXS)
+                    .foregroundStyle(JPouchColor.textSecondary)
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .jpouchCard()
     }
 }
 
@@ -228,19 +225,17 @@ private struct UpcomingSurgeryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Your Timeline").font(.headline)
+            Text("Your Timeline").font(JPouchFont.displayLG)
             if let date = profile.stagedSurgeryDate ?? profile.takedownDate {
                 Text(date, style: .date)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.bodyXS)
+                    .foregroundStyle(JPouchColor.textSecondary)
             } else {
                 Text("Set your surgery date in Settings to see it here.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.bodyXS)
+                    .foregroundStyle(JPouchColor.textSecondary)
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .jpouchCard()
     }
 }

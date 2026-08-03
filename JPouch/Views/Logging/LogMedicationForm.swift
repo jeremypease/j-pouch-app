@@ -29,8 +29,8 @@ struct LogMedicationForm: View {
                 Section {
                     if healthMedications.isEmpty {
                         Text("Nothing shared with J-Pouch yet.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(JPouchFont.bodyXS)
+                            .foregroundStyle(JPouchColor.textSecondary)
                         Button("Share My Medications with J-Pouch") {
                             Task {
                                 await healthKit.requestMedicationsAuthorization()
@@ -42,7 +42,7 @@ struct LogMedicationForm: View {
                         VStack(alignment: .leading) {
                             Text(medication.nickname ?? medication.name)
                             if medication.hasSchedule {
-                                Text("Scheduled in Health").font(.caption).foregroundStyle(.secondary)
+                                Text("Scheduled in Health").font(JPouchFont.bodyXS).foregroundStyle(JPouchColor.textSecondary)
                             }
                         }
                     }

@@ -50,8 +50,8 @@ struct OnboardingView: View {
         NavigationStack {
             VStack(spacing: 24) {
                 Text("Step \(step.rawValue + 1) of \(Step.allCases.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.bodyXS)
+                    .foregroundStyle(JPouchColor.textSecondary)
                     .padding(.top, 24)
 
                 ScrollView {
@@ -73,6 +73,7 @@ struct OnboardingView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 24)
             }
+            .background(JPouchColor.background)
         }
     }
 
@@ -86,11 +87,12 @@ struct OnboardingView: View {
             // below each carry their own description, so the standfirst is the part to drop.
             VStack(spacing: 8) {
                 Text("Welcome to J-Pouch")
-                    .font(dynamicTypeSize.isAccessibilitySize ? .title3.bold() : .largeTitle.bold())
+                    .font(dynamicTypeSize.isAccessibilitySize ? JPouchFont.displayLG : JPouchFont.display3XL)
+                    .foregroundStyle(JPouchColor.textPrimary)
                 if !dynamicTypeSize.isAccessibilitySize {
                     Text("Tell us where you are in your journey so we only ask you about what's relevant right now.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(JPouchFont.bodySM)
+                        .foregroundStyle(JPouchColor.textSecondary)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -103,23 +105,23 @@ struct OnboardingView: View {
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(stage.displayName)
-                                    .font(.headline)
+                                    .font(JPouchFont.displayLG)
+                                    .foregroundStyle(JPouchColor.textPrimary)
                                 Text(stage.summary)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(JPouchFont.bodyXS)
+                                    .foregroundStyle(JPouchColor.textSecondary)
                                     .multilineTextAlignment(.leading)
                             }
                             Spacer()
                             if selectedStage == stage {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.tint)
+                                    .foregroundStyle(JPouchColor.primary)
                                     // The trait below already conveys this; without hiding it
                                     // VoiceOver reads a redundant "checkmark circle fill".
                                     .accessibilityHidden(true)
                             }
                         }
-                        .padding()
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                        .jpouchCard(selected: selectedStage == stage)
                     }
                     .buttonStyle(.plain)
                     // Selection was conveyed only by the checkmark, so VoiceOver gave no way
@@ -143,8 +145,8 @@ struct OnboardingView: View {
                     .font(.subheadline)
                 }
                 Text("Optional, but it lets J-Pouch move you between stages on its own instead of waiting for you to update it.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.body2XS)
+                    .foregroundStyle(JPouchColor.textSecondary)
             }
         }
         .padding(.horizontal)
@@ -166,9 +168,11 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Medications")
-                    .font(.title2.bold())
+                    .font(JPouchFont.display2XL)
+                    .foregroundStyle(JPouchColor.textPrimary)
                 Text("Are you currently taking any medications?")
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.bodyMD)
+                    .foregroundStyle(JPouchColor.textSecondary)
             }
 
             Picker("Taking medications", selection: $takingMedications) {
@@ -181,8 +185,8 @@ struct OnboardingView: View {
                 if healthKit.supportsMedicationsAPI {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Add them in the Health app under Browse → Medications — J-Pouch will show them automatically once you connect Health on the next step, so you don't need to re-enter anything. You'll get a separate prompt there for picking which medications to share, so watch for two prompts, not one.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(JPouchFont.bodyXS)
+                            .foregroundStyle(JPouchColor.textSecondary)
                         Button("Open Health App") {
                             openURL(URL(string: "x-apple-health://")!)
                         }
@@ -200,8 +204,7 @@ struct OnboardingView: View {
                                     .textFieldStyle(.roundedBorder)
                                 Toggle("Antibiotic course", isOn: $draft.isAntibiotic)
                             }
-                            .padding()
-                            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                            .jpouchCard()
                         }
                         Button("Add Medication") {
                             draftMedications.append(MedicationDraft())
@@ -225,10 +228,11 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Hydration Target")
-                    .font(.title2.bold())
+                    .font(JPouchFont.display2XL)
+                    .foregroundStyle(JPouchColor.textPrimary)
                 Text("Pouch patients often need more fluid than average. Connect Apple Health and we'll suggest a starting point from your weight\(healthKit.supportsMedicationsAPI ? " — this also lets J-Pouch show medications from Health" : "") — you can always adjust it later in Settings.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.bodyXS)
+                    .foregroundStyle(JPouchColor.textSecondary)
             }
 
             if healthKit.connectionState == .connected {
@@ -276,8 +280,8 @@ struct OnboardingView: View {
 
             if let weightLookupMessage {
                 Text(weightLookupMessage)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.body2XS)
+                    .foregroundStyle(JPouchColor.textSecondary)
             }
 
             Toggle("I'll enter my weight", isOn: $knowsWeight)
@@ -287,13 +291,13 @@ struct OnboardingView: View {
                     Stepper("Weight: \(Int(weightLb)) lb", value: $weightLb, in: 60...400, step: 1)
                     if weightFromHealth {
                         Text("From Health — adjust if this isn't current.")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(JPouchFont.body2XS)
+                            .foregroundStyle(JPouchColor.textSecondary)
                     }
                     if !hasCustomizedTarget {
                         Text("Suggested target: \(suggestedHydrationTargetML) mL/day")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(JPouchFont.bodyXS)
+                            .foregroundStyle(JPouchColor.textSecondary)
                     }
                 }
             }
@@ -306,8 +310,8 @@ struct OnboardingView: View {
                     step: 250
                 )
                 Text("This is a starting point, not medical advice — talk to your GI or dietitian for a number tailored to you, especially with high output.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(JPouchFont.body2XS)
+                    .foregroundStyle(JPouchColor.textSecondary)
             }
         }
         .padding(.horizontal)
