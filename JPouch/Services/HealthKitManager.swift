@@ -92,6 +92,22 @@ final class HealthKitManager {
         return sample.uuid
     }
 
+    /// Deletes a previously-written water sample by its HealthKit UUID.
+    ///
+    /// `HKHealthStore` has no "delete by ID" call — deleting requires the actual `HKObject`, so
+    /// this looks the sample up by UUID first. Silently returns if it's already gone (deleted
+    /// from the Health app directly, say) rather than treating a missing sample as an error:
+    /// the end state either way is "this UUID isn't in HealthKit," which is what the caller
+    /// wants.
+    func deleteWaterSample(id: UUID) async throws {
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.quantitySample(type: waterType, predicate: HKQuery.predicateForObject(with: id))],
+            sortDescriptors: []
+        )
+        guard let sample = try await descriptor.result(for: store).first else { return }
+        try await store.delete(sample)
+    }
+
     func latestBodyMassKG() async throws -> Double? {
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.quantitySample(type: bodyMassType)],

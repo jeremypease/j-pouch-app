@@ -3,7 +3,7 @@ import UIKit
 
 /// The design system's raw values. Nothing outside this file should name a hex code or a bare
 /// point value — screens reach for `JP.Color.attention` and `JP.Spacing.lg` instead, so that
-/// "make the cards softer" or "warm up the amber" is a one-file change.
+/// "make the cards softer" or "warm up the coral" is a one-file change.
 enum JP {}
 
 // MARK: - Palette
@@ -12,18 +12,24 @@ extension JP {
     /// The raw ramp. Private on purpose: these are ingredients, not the vocabulary. Semantic
     /// names below are what screens use, so a colour can be repointed without a find-and-replace
     /// across every view.
+    ///
+    /// Teal and coral are sampled directly from the real app icon (`JPouch/Resources/Assets.xcassets/
+    /// AppIcon.appiconset/icon-1024.png`) — a cyan-leaning teal background and a coral/salmon
+    /// glyph — rather than guessed at before a real icon existed. Emerald/rose are unrelated to
+    /// the icon and unchanged.
     fileprivate enum Ramp {
-        static let teal50: UInt32 = 0xF0FDFA
-        static let teal100: UInt32 = 0xCCFBF1
-        static let teal400: UInt32 = 0x2DD4BF
-        static let teal500: UInt32 = 0x14B8A6
-        static let teal600: UInt32 = 0x0D9488
-        static let teal700: UInt32 = 0x0F766E
-        static let teal900: UInt32 = 0x134E4A
+        static let teal50: UInt32 = 0xEDF7F7
+        static let teal100: UInt32 = 0xD5ECEC
+        static let teal400: UInt32 = 0x4DB2B1
+        static let teal500: UInt32 = 0x2F7978
+        static let teal600: UInt32 = 0x256563
+        static let teal700: UInt32 = 0x1C4F4E
+        static let teal900: UInt32 = 0x0E2A2A
 
-        static let amber500: UInt32 = 0xF59E0B
-        static let amber600: UInt32 = 0xD97706
-        static let amber700: UInt32 = 0xB45309
+        static let coral300: UInt32 = 0xED9982
+        static let coral400: UInt32 = 0xE96C49
+        static let coral500: UInt32 = 0xDF4920
+        static let coral600: UInt32 = 0xB83F1E
 
         static let emerald400: UInt32 = 0x34D399
         static let emerald700: UInt32 = 0x047857
@@ -35,10 +41,10 @@ extension JP {
     enum Color {
         /// Text and interactive tint.
         ///
-        /// Deliberately teal-700 rather than the brand teal-500: teal-500 on white is about
-        /// 2.3:1, which fails WCAG AA for body text. This is an app people open when they feel
-        /// terrible, so the readable end of the ramp wins for anything carrying words. The brand
-        /// teal-500 still appears, as `brandFill`, wherever it's a shape rather than text.
+        /// Reads from `AccentColor` in the asset catalog, kept in sync with `Ramp.teal500`/
+        /// `teal300` here — 5.1:1 against white in light mode, comfortably past the 4.5:1 AA
+        /// threshold for text. The same brand teal still appears, as `brandFill`, wherever it's
+        /// a shape rather than text.
         static let accent = SwiftUI.Color.accentColor
 
         /// The saturated brand teal, for filled shapes and progress — never for text on white.
@@ -48,10 +54,11 @@ extension JP {
         static let brandSurface = adaptive(light: Ramp.teal50, dark: Ramp.teal900)
         static let brandSurfaceStrong = adaptive(light: Ramp.teal100, dark: Ramp.teal700)
 
-        /// Pattern flags. Amber, never red: these mean "worth raising with your GI", not
-        /// "emergency", and J-Pouch never diagnoses.
-        static let attention = adaptive(light: Ramp.amber700, dark: Ramp.amber500)
-        static let attentionFill = adaptive(light: Ramp.amber600, dark: Ramp.amber500)
+        /// Pattern flags. Coral, never red: these mean "worth raising with your GI", not
+        /// "emergency", and J-Pouch never diagnoses. 5.1:1 against the light background, 6.9:1
+        /// against the dark background — both clear AA.
+        static let attention = adaptive(light: Ramp.coral600, dark: Ramp.coral300)
+        static let attentionFill = adaptive(light: Ramp.coral500, dark: Ramp.coral400)
 
         /// Something actually went wrong — a failed save or sync.
         static let critical = adaptive(light: Ramp.rose700, dark: Ramp.rose500)

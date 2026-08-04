@@ -35,7 +35,7 @@ enum BloodLevel: String, Codable, CaseIterable, Identifiable {
 @Model
 final class OutputEntry {
     var timestamp: Date = Date.now
-    /// Pouch-adapted consistency scale, 1 (very loose/watery) – 7 (formed).
+    /// Pouch-adapted consistency scale, 1 (very firm/formed) – 7 (entirely liquid).
     var consistency: Int = 4
     var hasUrgency: Bool = false
     /// 0–5, only meaningful when hasUrgency is true.
