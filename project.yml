@@ -73,6 +73,12 @@ targets:
       - name: Stamp build number from git
         # Runs before code signing, so editing the built plist here is safe.
         basedOnDependencyAnalysis: false
+        # Xcode's User Script Sandboxing (default on since Xcode 15) blocks writes into
+        # build-product locations that a script doesn't declare as an output, failing
+        # PlistBuddy's write with "Operation not permitted" — this declaration is what
+        # grants it access.
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
         script: |
           set -eu
           PLIST="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
