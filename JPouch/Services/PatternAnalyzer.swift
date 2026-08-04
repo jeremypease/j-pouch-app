@@ -141,23 +141,7 @@ enum PatternAnalyzer {
         let today = calendar.startOfDay(for: referenceDate)
         let byDay = Dictionary(uniqueKeysWithValues: summaries.map { (calendar.startOfDay(for: $0.date), $0) })
 
-        // Each flag's baseline excludes its own evaluation window, so a spike can't quietly
-        // inflate the very baseline it's being measured against and mask itself.
-        let dehydrationBaseline = baselineOutputPerDay(
-            byDay: byDay,
-            excludingMostRecentDays: dehydrationConsecutiveDays,
-            endingAt: today,
-            calendar: calendar
-        )
-        let flareBaseline = baselineOutputPerDay(
-            byDay: byDay,
-            excludingMostRecentDays: flareConsecutiveDays,
-            endingAt: today,
-            calendar: calendar
-        )
-
-        let dehydration = status(
-            baseline: dehydrationBaseline,
+        let dehydration = evaluate(
             byDay: byDay,
             today: today,
             calendar: calendar,
@@ -170,8 +154,7 @@ enum PatternAnalyzer {
                 && summary.hydrationML < hydrationTargetML
         }
 
-        let flare = status(
-            baseline: flareBaseline,
+        let flare = evaluate(
             byDay: byDay,
             today: today,
             calendar: calendar,
@@ -181,9 +164,9 @@ enum PatternAnalyzer {
         }
 
         return Analysis(
-            dehydration: dehydration,
-            flare: flare,
-            baselineOutputPerDay: flareBaseline ?? dehydrationBaseline
+            dehydration: dehydration.status,
+            flare: flare.status,
+            baselineOutputPerDay: flare.baseline ?? dehydration.baseline
         )
     }
 
@@ -278,31 +261,77 @@ enum PatternAnalyzer {
         return Double(counts.reduce(0, +)) / Double(counts.count)
     }
 
-    /// Walks back from today counting consecutive days that satisfy `matches`. A day with no
-    /// summary at all breaks the streak rather than being skipped — we don't flag across gaps
-    /// in logging, since we can't know what happened on the missing days.
-    private static func status(
-        baseline: Double?,
+    /// Finds the true length of a currently-active streak together with a baseline that's
+    /// self-consistent with it.
+    ///
+    /// The naive version of this — count up to `requiredDays` and stop — can never report a
+    /// streak longer than the threshold, so a flag that's been active for two weeks reads
+    /// identically to one that started yesterday. Simply removing that cap isn't enough on its
+    /// own, though: the baseline is computed by excluding a fixed number of recent days, and if
+    /// the real streak runs longer than that exclusion window, the tail end of the streak
+    /// leaks into the baseline average and starts dragging it upward — the exact self-masking
+    /// the fixed window was originally there to prevent. So this alternates between counting
+    /// the streak and widening the baseline's exclusion to match it until the two agree.
+    private static func evaluate(
         byDay: [Date: DailySummary],
         today: Date,
         calendar: Calendar,
         requiredDays: Int,
         matches: (DailySummary, Double) -> Bool
-    ) -> PatternStatus {
-        guard let baseline else {
-            let logged = byDay.values.filter { $0.outputCount > 0 }.count
-            return .buildingBaseline(loggedDays: logged, daysNeeded: minimumBaselineDays)
+    ) -> (status: PatternStatus, baseline: Double?) {
+        var exclusion = requiredDays
+        var streak = -1
+
+        // Small fixed cap rather than looping until convergence: realistic data settles in 1-2
+        // rounds (the streak either doesn't change, or grows to meet a wider exclusion window
+        // that then doesn't move the baseline enough to change the streak again). Anything that
+        // doesn't settle within this many rounds is pathological input, not a longer streak.
+        for _ in 0..<8 {
+            guard let baseline = baselineOutputPerDay(
+                byDay: byDay,
+                excludingMostRecentDays: exclusion,
+                endingAt: today,
+                calendar: calendar
+            ) else {
+                let logged = byDay.values.filter { $0.outputCount > 0 }.count
+                return (.buildingBaseline(loggedDays: logged, daysNeeded: minimumBaselineDays), nil)
+            }
+
+            let newStreak = consecutiveMatchingDays(byDay: byDay, today: today, calendar: calendar) { summary in
+                matches(summary, baseline)
+            }
+
+            if newStreak == streak {
+                return (newStreak >= requiredDays ? .flagged(consecutiveDays: newStreak) : .steady, baseline)
+            }
+            streak = newStreak
+            exclusion = max(streak, requiredDays)
         }
 
+        let baseline = baselineOutputPerDay(
+            byDay: byDay, excludingMostRecentDays: exclusion, endingAt: today, calendar: calendar
+        )
+        return (streak >= requiredDays ? .flagged(consecutiveDays: streak) : .steady, baseline)
+    }
+
+    /// Walks back from today counting consecutive days that satisfy `matches`. A day with no
+    /// summary at all breaks the streak rather than being skipped — we don't flag across gaps
+    /// in logging, since we can't know what happened on the missing days. Capped at 10 years so
+    /// corrupted data can't spin this forever; no genuine streak runs anywhere near that long.
+    private static func consecutiveMatchingDays(
+        byDay: [Date: DailySummary],
+        today: Date,
+        calendar: Calendar,
+        matches: (DailySummary) -> Bool
+    ) -> Int {
         var streak = 0
-        for offset in 0..<requiredDays {
+        for offset in 0..<3_650 {
             guard let day = calendar.date(byAdding: .day, value: -offset, to: today),
                   let summary = byDay[day],
-                  matches(summary, baseline)
+                  matches(summary)
             else { break }
             streak += 1
         }
-
-        return streak >= requiredDays ? .flagged(consecutiveDays: streak) : .steady
+        return streak
     }
 }

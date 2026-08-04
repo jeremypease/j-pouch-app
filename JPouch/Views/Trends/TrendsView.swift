@@ -54,8 +54,8 @@ struct TrendsView: View {
 
                     if generationFailed {
                         Text("Couldn't build the report. Please try again.")
-                            .font(.caption)
-                            .foregroundStyle(.red)
+                            .font(JP.Font.caption)
+                            .foregroundStyle(JP.Color.critical)
                     }
                 } header: {
                     Text("GI Visit Report")
@@ -65,19 +65,19 @@ struct TrendsView: View {
 
                 Section("Recent Output") {
                     if outputEntries.isEmpty {
-                        Text("No entries yet.").foregroundStyle(.secondary)
+                        Text("No entries yet.").foregroundStyle(JP.Color.secondaryText)
                     }
                     ForEach(recentOutput) { entry in
                         VStack(alignment: .leading, spacing: 2) {
                             Text(entry.timestamp, style: .date) + Text(" \u{2022} ") + Text(entry.timestamp, style: .time)
                             Text("Consistency \(entry.consistency)/7 \u{2022} Pain \(entry.pain)/5\(entry.blood != .none ? " \u{2022} Blood: \(entry.blood.displayName)" : "")")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(JP.Font.caption)
+                                .foregroundStyle(JP.Color.secondaryText)
                             if let notes = entry.notes, !notes.isEmpty {
                                 Text(notes)
-                                    .font(.caption)
+                                    .font(JP.Font.caption)
                                     .italic()
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(JP.Color.secondaryText)
                             }
                         }
                     }
@@ -88,30 +88,39 @@ struct TrendsView: View {
 
                 Section("Recent Hydration") {
                     if hydrationEntries.isEmpty {
-                        Text("No entries yet.").foregroundStyle(.secondary)
+                        Text("No entries yet.").foregroundStyle(JP.Color.secondaryText)
                     }
                     ForEach(recentHydration) { entry in
                         AdaptiveLabeledRow(label: "\(entry.volumeML) mL \u{2022} \(entry.kind.displayName)") {
                             Text(entry.timestamp, style: .time)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(JP.Font.metricSmall)
+                                .foregroundStyle(JP.Color.secondaryText)
                         }
                     }
                     .onDelete { offsets in
-                        offsets.map { recentHydration[$0] }.forEach(modelContext.delete)
+                        for entry in offsets.map({ recentHydration[$0] }) {
+                            // Capture the HealthKit sample ID before deleting the local entry —
+                            // once it's deleted the property is gone, and without this the
+                            // written sample would be orphaned in Health forever.
+                            if let sampleIDString = entry.healthKitSampleID,
+                               let sampleID = UUID(uuidString: sampleIDString) {
+                                Task { try? await HealthKitManager.shared.deleteWaterSample(id: sampleID) }
+                            }
+                            modelContext.delete(entry)
+                        }
                     }
                 }
 
                 Section("Recent Food") {
                     if foodEntries.isEmpty {
-                        Text("No entries yet.").foregroundStyle(.secondary)
+                        Text("No entries yet.").foregroundStyle(JP.Color.secondaryText)
                     }
                     ForEach(recentFood) { entry in
                         VStack(alignment: .leading) {
                             Text(entry.foodDescription)
                             Text(entry.timestamp, style: .date)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(JP.Font.caption)
+                                .foregroundStyle(JP.Color.secondaryText)
                         }
                     }
                     .onDelete { offsets in
@@ -121,14 +130,14 @@ struct TrendsView: View {
 
                 Section {
                     if medicationEntries.isEmpty {
-                        Text("Nothing tracked here.").foregroundStyle(.secondary)
+                        Text("Nothing tracked here.").foregroundStyle(JP.Color.secondaryText)
                     }
                     ForEach(medicationEntries) { medication in
                         VStack(alignment: .leading) {
                             Text(medication.name)
                             Text(medicationDetail(for: medication))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(JP.Font.caption)
+                                .foregroundStyle(JP.Color.secondaryText)
                         }
                     }
                     .onDelete(perform: deleteMedications)

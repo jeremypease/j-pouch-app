@@ -10,6 +10,10 @@ struct LogHydrationForm: View {
     @State private var syncError: String?
     /// nil means "whenever the amount is tapped" — same reasoning as the output form.
     @State private var backdatedTo: Date?
+    /// Set on every quick-add tap so the toast text always matches what was actually logged,
+    /// not just a static "Saved" — there's no confirmation otherwise, so a fast tapper has no
+    /// way to tell whether it registered.
+    @State private var lastLoggedText: String?
 
     private var isBackdating: Bool { backdatedTo != nil }
 
@@ -62,17 +66,24 @@ struct LogHydrationForm: View {
             if let syncError {
                 Section {
                     Text(syncError)
-                        .font(.caption)
-                        .foregroundStyle(.red)
+                        .font(JP.Font.caption)
+                        .foregroundStyle(JP.Color.critical)
                 }
             }
         }
+        .jpSaveConfirmation(isShowing: lastLoggedText != nil, text: lastLoggedText ?? "Saved")
     }
 
     private func log(volumeML: Int) {
         let timestamp = backdatedTo ?? .now
         let entry = HydrationEntry(timestamp: timestamp, volumeML: volumeML, kind: kind)
         modelContext.insert(entry)
+
+        withAnimation { lastLoggedText = "\(volumeML) mL logged" }
+        Task {
+            try? await Task.sleep(for: .seconds(1.2))
+            lastLoggedText = nil
+        }
 
         guard kind == .water else { return }
         // Explicitly main-actor rather than relying on the enclosing isolation being inferred:
