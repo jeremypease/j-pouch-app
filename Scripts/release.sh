@@ -2,10 +2,10 @@
 #
 # Archives and uploads J-Pouch to TestFlight without opening Xcode.
 #
-# Written because macOS 27 refuses to launch the Xcode 26.6 GUI, while its command line tools
-# work fine. Signing normally relies on an account added through Xcode's Accounts settings,
-# which isn't reachable — an App Store Connect API key replaces it and lets xcodebuild create
-# the distribution certificate and provisioning profile itself.
+# The default release path is Xcode's own GUI (Product → Archive → Distribute App); this script
+# is the command-line fallback, for when that isn't available or breaks again. It doesn't rely
+# on an account added through Xcode's Accounts settings — an App Store Connect API key replaces
+# it and lets xcodebuild create the distribution certificate and provisioning profile itself.
 #
 # One-time setup, in App Store Connect → Users and Access → Integrations → App Store Connect
 # API → Team Keys. Generate a key with the "App Manager" role (needed to create signing
