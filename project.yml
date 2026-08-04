@@ -69,6 +69,13 @@ targets:
         # keychain also holds a personal-team cert whose identifier looks equally plausible,
         # and using that one made signing fail with "No Account for Team".
         DEVELOPMENT_TEAM: S6M9LCA6DC
+        # The "Stamp build number from git" postBuildScript below edits the already-built
+        # Info.plist in place — it doesn't declare that as an output (doing so collides
+        # with the standard ProcessInfoPlistFile step that already produces it, causing a
+        # "Multiple commands produce Info.plist" build error). Without a declared output,
+        # Xcode's User Script Sandboxing (on by default since Xcode 15) blocks the write
+        # with "Operation not permitted", so sandboxing is disabled for the target instead.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
     postBuildScripts:
       - name: Stamp build number from git
         # Runs before code signing, so editing the built plist here is safe.
