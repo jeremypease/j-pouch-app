@@ -15,7 +15,7 @@ struct OnboardingView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private enum Step: Int, CaseIterable {
-        case stage, medications, hydration
+        case stage, health
     }
 
     @State private var step: Step = .stage
@@ -56,12 +56,11 @@ struct OnboardingView: View {
                 ScrollView {
                     switch step {
                     case .stage: stageStep
-                    case .medications: medicationsStep
-                    case .hydration: hydrationStep
+                    case .health: healthStep
                     }
                 }
 
-                Button(step == .hydration ? "Finish" : "Continue") {
+                Button(step == .health ? "Finish" : "Continue") {
                     advance()
                 }
                 .buttonStyle(.jpPrimary)
@@ -137,67 +136,62 @@ struct OnboardingView: View {
         return surgeryDate
     }
 
-    // MARK: - Medications
+    // MARK: - Health (medications + hydration)
 
-    private var medicationsStep: some View {
+    private var healthStep: some View {
         VStack(alignment: .leading, spacing: JP.Spacing.xl) {
             StepHeader(
-                title: "Medications",
-                subtitle: "Are you currently taking any medications?"
+                title: "Medications & Hydration",
+                subtitle: "Connecting Apple Health below is a single request that brings in your medications and your weight — no need to grant them separately."
             )
 
-            Picker("Taking medications", selection: $takingMedications) {
-                Text("No").tag(false)
-                Text("Yes").tag(true)
-            }
-            .pickerStyle(.segmented)
+            VStack(alignment: .leading, spacing: JP.Spacing.md) {
+                JPCardHeader(title: "Medications", icon: "pills.fill")
+                Text("Are you currently taking any medications?")
+                    .font(JP.Font.callout)
+                    .foregroundStyle(JP.Color.secondaryText)
 
-            if takingMedications {
-                if healthKit.supportsMedicationsAPI {
-                    VStack(alignment: .leading, spacing: JP.Spacing.md) {
-                        JPCaption("Add them in the Health app under Browse → Medications — J-Pouch will show them automatically once you connect Health on the next step, so you don't need to re-enter anything. You'll get a separate prompt there for picking which medications to share, so watch for two prompts, not one.")
-                        Button("Open Health App") {
-                            openURL(URL(string: "x-apple-health://")!)
-                        }
-                        .buttonStyle(.jpSecondary)
-                    }
-                    .jpCard()
-                } else {
-                    VStack(alignment: .leading, spacing: JP.Spacing.lg) {
-                        ForEach($draftMedications) { $draft in
-                            VStack(alignment: .leading, spacing: JP.Spacing.md) {
-                                JPTextField(label: "Name", placeholder: "e.g. Ciprofloxacin", text: $draft.name)
-                                JPTextField(label: "Dosage", placeholder: "e.g. 500 mg", text: $draft.dosage)
-                                JPTextField(label: "Schedule", placeholder: "e.g. twice daily", text: $draft.schedule)
-                                Toggle("Antibiotic course", isOn: $draft.isAntibiotic)
-                                    .toggleStyle(.jpCheckbox)
+                Picker("Taking medications", selection: $takingMedications) {
+                    Text("No").tag(false)
+                    Text("Yes").tag(true)
+                }
+                .pickerStyle(.segmented)
+
+                if takingMedications {
+                    if healthKit.supportsMedicationsAPI {
+                        VStack(alignment: .leading, spacing: JP.Spacing.md) {
+                            JPCaption("Add them in the Health app under Browse → Medications, then connect Apple Health below — J-Pouch will show them automatically, so you don't need to re-enter anything. Connecting brings up a separate prompt for picking which medications to share, so watch for two prompts, not one.")
+                            Button("Open Health App") {
+                                openURL(URL(string: "x-apple-health://")!)
                             }
-                            .jpCard()
+                            .buttonStyle(.jpSecondary)
                         }
-                        Button("Add Medication") {
-                            draftMedications.append(MedicationDraft())
+                    } else {
+                        VStack(alignment: .leading, spacing: JP.Spacing.lg) {
+                            ForEach($draftMedications) { $draft in
+                                VStack(alignment: .leading, spacing: JP.Spacing.md) {
+                                    JPTextField(label: "Name", placeholder: "e.g. Ciprofloxacin", text: $draft.name)
+                                    JPTextField(label: "Dosage", placeholder: "e.g. 500 mg", text: $draft.dosage)
+                                    JPTextField(label: "Schedule", placeholder: "e.g. twice daily", text: $draft.schedule)
+                                    Toggle("Antibiotic course", isOn: $draft.isAntibiotic)
+                                        .toggleStyle(.jpCheckbox)
+                                }
+                                .jpCard()
+                            }
+                            Button("Add Medication") {
+                                draftMedications.append(MedicationDraft())
+                            }
+                            .buttonStyle(.jpSecondary)
                         }
-                        .buttonStyle(.jpSecondary)
-                    }
-                    .onAppear {
-                        if draftMedications.isEmpty {
-                            draftMedications.append(MedicationDraft())
+                        .onAppear {
+                            if draftMedications.isEmpty {
+                                draftMedications.append(MedicationDraft())
+                            }
                         }
                     }
                 }
             }
-        }
-        .padding(.horizontal, JP.Spacing.lg)
-    }
-
-    // MARK: - Hydration
-
-    private var hydrationStep: some View {
-        VStack(alignment: .leading, spacing: JP.Spacing.xl) {
-            StepHeader(
-                title: "Hydration Target",
-                subtitle: "Pouch patients often need more fluid than average. Connect Apple Health and we'll suggest a starting point from your weight\(healthKit.supportsMedicationsAPI ? " — this also lets J-Pouch show medications from Health" : "") — you can always adjust it later in Settings."
-            )
+            .jpCard()
 
             healthConnectCard
 
