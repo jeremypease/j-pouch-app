@@ -28,7 +28,7 @@ struct LogHydrationForm: View {
                 .pickerStyle(.segmented)
             }
 
-            Section("Quick Add") {
+            Section("Quick add") {
                 HStack {
                     ForEach(quickAmountsML, id: \.self) { amount in
                         Button("\(amount) mL") {

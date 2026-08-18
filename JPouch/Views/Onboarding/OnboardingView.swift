@@ -7,7 +7,35 @@ struct OnboardingView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private enum Step: Int, CaseIterable {
-        case welcome, stage, health, reminders
+        case welcome, track, privacy, stage, health, reminders
+
+        /// The design opens with three slides before it asks anything — this is what the five
+        /// page dots in the mockup were counting (three slides, stage, Health), not a screen
+        /// missing from the app. Reminders is ours, added on top.
+        var slide: (title: String, body: String, symbol: String?)? {
+            switch self {
+            case .welcome:
+                return (
+                    "Welcome to J-Pouch",
+                    "Your companion for j-pouch surgery, recovery, and life after — one place to track how you're doing.",
+                    nil
+                )
+            case .track:
+                return (
+                    "Track what matters",
+                    "Output, hydration, medications, and symptoms — logged in seconds, so you can spot patterns instead of guessing.",
+                    "chart.xyaxis.line"
+                )
+            case .privacy:
+                return (
+                    "Private, and yours",
+                    "Your data stays with you. Share a summary with your care team only when you choose to.",
+                    "lock.shield.fill"
+                )
+            case .stage, .health, .reminders:
+                return nil
+            }
+        }
     }
 
     @State private var step: Step = .welcome
@@ -48,7 +76,7 @@ struct OnboardingView: View {
                 ScrollView {
                     Group {
                         switch step {
-                        case .welcome: welcomeStep
+                        case .welcome, .track, .privacy: welcomeSlide
                         case .stage: stageStep
                         case .health: healthStep
                         case .reminders: remindersStep
@@ -75,35 +103,63 @@ struct OnboardingView: View {
 
     // MARK: - Welcome
 
-    private var welcomeStep: some View {
-        VStack(spacing: JP.Spacing.xl) {
-            Spacer(minLength: JP.Spacing.xl)
+    @ViewBuilder
+    private var welcomeSlide: some View {
+        if let slide = step.slide {
+            VStack(spacing: JP.Spacing.xl) {
+                Spacer(minLength: JP.Spacing.xl)
 
-            Image("AppMark")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 96, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .shadow(color: .black.opacity(0.08), radius: 18, y: 8)
-                // The name and tagline below say all of this; the icon is decoration.
+                // The opening slide leads with the app mark; the other two use a symbol in a
+                // tile of the same footprint, so the three keep one rhythm rather than the
+                // brand moment shrinking into a generic icon row.
+                Group {
+                    if let symbol = slide.symbol {
+                        Image(systemName: symbol)
+                            .font(.system(size: 40, weight: .medium))
+                            .foregroundStyle(JP.Color.brandFill)
+                            .frame(width: 96, height: 96)
+                            // brandSurface is teal-50 — the same value as the page background,
+                            // so a tile painted with it vanished and left the symbol floating.
+                            .background(
+                                JP.Color.brandSurfaceStrong,
+                                in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            )
+                    } else {
+                        Image("AppMark")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 96, height: 96)
+                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                            .shadow(color: .black.opacity(0.08), radius: 18, y: 8)
+                    }
+                }
+                // The title and body below say all of this; the mark is decoration.
                 .accessibilityHidden(true)
 
-            VStack(spacing: JP.Spacing.md) {
-                Text("Welcome to J-Pouch")
-                    .font(JP.Font.displayLarge)
-                    .multilineTextAlignment(.center)
-                Text("Your companion for j-pouch surgery, recovery, and life after — one place to track how you're doing.")
-                    .font(JP.Font.callout)
-                    .foregroundStyle(JP.Color.secondaryText)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+                VStack(spacing: JP.Spacing.md) {
+                    Text(slide.title)
+                        .jpDisplayLarge()
+                        .multilineTextAlignment(.center)
+                    Text(slide.body)
+                        .font(JP.Font.callout)
+                        .foregroundStyle(JP.Color.secondaryText)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
-            Spacer(minLength: JP.Spacing.xl)
+                Spacer(minLength: JP.Spacing.xl)
+            }
+            .frame(maxWidth: .infinity)
+            .containerRelativeFrame(.vertical, alignment: .center)
+            .padding(.horizontal, JP.Spacing.xl)
+            // Without an identity per slide, SwiftUI reuses the same views and the copy swaps
+            // in place with no sense of moving forward.
+            .id(step)
+            .transition(.asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
+            ))
         }
-        .frame(maxWidth: .infinity)
-        .containerRelativeFrame(.vertical, alignment: .center)
-        .padding(.horizontal, JP.Spacing.xl)
     }
 
     // MARK: - Stage
@@ -115,9 +171,16 @@ struct OnboardingView: View {
             // there was no visible sign of what tapping Continue would choose. The cards
             // below each carry their own description, so the standfirst is the part to drop.
             VStack(spacing: JP.Spacing.sm) {
-                Text("Welcome to J-Pouch")
-                    .font(dynamicTypeSize.isAccessibilitySize ? JP.Font.title : JP.Font.displayLarge)
-                    .multilineTextAlignment(.center)
+                Group {
+                    // Was a second "Welcome to J-Pouch", which now repeats the first slide.
+                    // The design names this step for the question it actually asks.
+                    if dynamicTypeSize.isAccessibilitySize {
+                        Text("Where are you right now?").font(JP.Font.title)
+                    } else {
+                        Text("Where are you right now?").jpDisplayLarge()
+                    }
+                }
+                .multilineTextAlignment(.center)
                 if !dynamicTypeSize.isAccessibilitySize {
                     Text("Tell us where you are in your journey so we only ask you about what's relevant right now.")
                         .font(JP.Font.callout)
@@ -242,7 +305,7 @@ struct OnboardingView: View {
     }
 
     /// The one ask on this step. Previously it sat under a "are you taking any medications?"
-    /// yes/no that fed nothing but a draft form, above an "Open Health App" button offered
+    /// yes/no that fed nothing but a draft form, above an "Open Health app" button offered
     /// before connecting — so tapping it accomplished nothing, since J-Pouch couldn't read
     /// anything from Health yet. Now there is a single action, with the reasons for it stated
     /// up front, and the Health app is only mentioned once it can actually do something.
@@ -279,7 +342,7 @@ struct OnboardingView: View {
             if healthKit.connectionState == .connected {
                 if healthKit.supportsMedicationsAPI {
                     JPCaption("Medications live in the Health app — add them under Browse → Medications and they'll appear in J-Pouch. Picking which ones to share is a separate prompt, so expect to be asked twice.")
-                    Button("Open Health App") {
+                    Button("Open Health app") {
                         openURL(URL(string: "x-apple-health://")!)
                     }
                     .buttonStyle(.jpSecondary)
@@ -296,7 +359,7 @@ struct OnboardingView: View {
                         if isConnectingHealth {
                             ProgressView()
                         } else {
-                            Text("Use My Weight from Health")
+                            Text("Use my weight from Health")
                         }
                     }
                     .buttonStyle(.jpSecondary)
@@ -407,7 +470,7 @@ struct OnboardingView: View {
             finishOnboarding()
             return
         }
-        step = next
+        withAnimation(.easeInOut(duration: 0.25)) { step = next }
     }
 
     private func finishOnboarding() {
@@ -492,7 +555,7 @@ private struct StepHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: JP.Spacing.sm) {
-            Text(title).font(JP.Font.displayMedium)
+            Text(title).jpDisplayMedium()
             Text(subtitle)
                 .font(JP.Font.callout)
                 .foregroundStyle(JP.Color.secondaryText)

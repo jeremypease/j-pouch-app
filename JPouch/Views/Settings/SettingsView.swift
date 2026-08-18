@@ -145,12 +145,12 @@ struct SettingsView: View {
                     Text("Takedown is the surgery that closes your temporary ileostomy and reconnects you through the pouch — it's when adaptation actually begins.")
                 }
                 Section("Hydration") {
-                    Stepper(
-                        "Daily target: \(profile.dailyHydrationTargetML) mL",
-                        value: $profile.dailyHydrationTargetML,
-                        in: 500...5000,
-                        step: 250
-                    )
+                    Stepper(value: $profile.dailyHydrationTargetML, in: 500...5000, step: 250) {
+                        AdaptiveLabeledRow(label: "Daily target") {
+                            Text("\(profile.dailyHydrationTargetML) mL")
+                                .font(JP.Font.metricSmall)
+                        }
+                    }
                 }
 
                 Section {
@@ -197,7 +197,7 @@ struct SettingsView: View {
                         // Named for what it actually does. Apple publishes no deep link to a
                         // specific app's Health permissions, so this lands on the Health home
                         // screen — the footer gives the rest of the route.
-                        Button("Open Health App") {
+                        Button("Open Health app") {
                             openURL(URL(string: "x-apple-health://")!)
                         }
                     case .notConnected:

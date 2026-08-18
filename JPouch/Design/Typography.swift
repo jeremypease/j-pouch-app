@@ -56,6 +56,15 @@ extension JP {
         static let metricLarge = SwiftUI.Font.custom(Face.monoMedium, size: 30, relativeTo: .title)
         static let metric = SwiftUI.Font.custom(Face.monoMedium, size: 22, relativeTo: .title2)
         static let metricSmall = SwiftUI.Font.custom(Face.mono, size: 14, relativeTo: .subheadline)
+        /// Sized to match `caption` and `callout`, for figures set inline inside a line of text.
+        /// A figure run has to match the size of the run beside it or the baseline looks broken,
+        /// so these exist to pair with the sans tokens rather than to offer new sizes.
+        static let metricCallout = SwiftUI.Font.custom(Face.mono, size: 15, relativeTo: .callout)
+        static let metricCaption = SwiftUI.Font.custom(Face.mono, size: 13, relativeTo: .caption)
+        /// Mono at reading size, for list rows whose whole label is a figure ("250 mL \u{2022} Water").
+        /// `metricSmall` would shrink those rows relative to the text around them; this keeps the
+        /// size and changes only the face.
+        static let metricBody = SwiftUI.Font.custom(Face.mono, size: 16, relativeTo: .body)
 
         /// Names of every face the app expects to have registered, for the debug check below.
         fileprivate static let allFaces = [
@@ -63,6 +72,43 @@ extension JP {
             Face.body, Face.bodyMedium, Face.bodySemibold,
             Face.mono, Face.monoMedium,
         ]
+    }
+}
+
+// MARK: - Headings
+
+/// Applies one of the two largest heading styles: the face, plus the design's tight tracking.
+///
+/// Tracking can't ride along inside a `Font` — SwiftUI puts it on the view — and it's specified
+/// in points while the design gives it in ems (`--tracking-tight: -0.02em`). So it has to be
+/// resolved against a point size by hand, and scaled by hand for Dynamic Type: `.tracking()`
+/// takes a fixed number that would stay put while the text around it grew, leaving headings
+/// visibly over-tightened at large sizes. `@ScaledMetric` scales it against the same text style
+/// the font is declared `relativeTo:`, so the two stay in step.
+private struct JPHeading: ViewModifier {
+    let font: Font
+    @ScaledMetric private var tracking: CGFloat
+
+    init(font: Font, baseSize: CGFloat, relativeTo textStyle: Font.TextStyle) {
+        self.font = font
+        _tracking = ScaledMetric(wrappedValue: baseSize * -0.02, relativeTo: textStyle)
+    }
+
+    func body(content: Content) -> some View {
+        content.font(font).tracking(tracking)
+    }
+}
+
+extension View {
+    /// The largest heading — screen titles. Only the two display sizes take tight tracking; the
+    /// design leaves the smaller headings (`JP.Font.title` and below) at normal tracking.
+    func jpDisplayLarge() -> some View {
+        modifier(JPHeading(font: JP.Font.displayLarge, baseSize: 28, relativeTo: .largeTitle))
+    }
+
+    /// The step-header heading, one size down.
+    func jpDisplayMedium() -> some View {
+        modifier(JPHeading(font: JP.Font.displayMedium, baseSize: 22, relativeTo: .title2))
     }
 }
 

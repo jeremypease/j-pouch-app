@@ -41,14 +41,14 @@ struct TrendsView: View {
                                 Text("Generating…")
                             }
                         } else {
-                            Text("Generate GI Visit Report")
+                            Text("Generate GI visit report")
                         }
                     }
                     .disabled(isGenerating)
 
                     if let reportURL {
                         ShareLink(item: reportURL) {
-                            Label("Share Report", systemImage: "square.and.arrow.up")
+                            Label("Share report", systemImage: "square.and.arrow.up")
                         }
                     }
 
@@ -58,19 +58,24 @@ struct TrendsView: View {
                             .foregroundStyle(JP.Color.critical)
                     }
                 } header: {
-                    Text("GI Visit Report")
+                    Text("GI visit report")
                 } footer: {
                     Text("A summary of what you've logged over the selected period, to bring to an appointment. It reports your data and how it compares to your own baseline — it doesn't diagnose anything.")
                 }
 
-                Section("Recent Output") {
+                Section("Recent output") {
                     if outputEntries.isEmpty {
                         Text("No entries yet.").foregroundStyle(JP.Color.secondaryText)
                     }
                     ForEach(recentOutput) { entry in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.timestamp, style: .date) + Text(" \u{2022} ") + Text(entry.timestamp, style: .time)
-                            Text("Consistency \(entry.consistency)/7 \u{2022} Pain \(entry.pain)/5\(entry.blood != .none ? " \u{2022} Blood: \(entry.blood.displayName)" : "")")
+                            (Text(entry.timestamp, style: .date) + Text(" \u{2022} ") + Text(entry.timestamp, style: .time))
+                                .font(JP.Font.metricBody)
+                            (Text("Consistency ")
+                                + Text("\(entry.consistency)/7").font(JP.Font.metricCaption)
+                                + Text(" \u{2022} Pain ")
+                                + Text("\(entry.pain)/5").font(JP.Font.metricCaption)
+                                + Text(entry.blood != .none ? " \u{2022} Blood: \(entry.blood.displayName)" : ""))
                                 .font(JP.Font.caption)
                                 .foregroundStyle(JP.Color.secondaryText)
                             if let notes = entry.notes, !notes.isEmpty {
@@ -86,12 +91,15 @@ struct TrendsView: View {
                     }
                 }
 
-                Section("Recent Hydration") {
+                Section("Recent hydration") {
                     if hydrationEntries.isEmpty {
                         Text("No entries yet.").foregroundStyle(JP.Color.secondaryText)
                     }
                     ForEach(recentHydration) { entry in
-                        AdaptiveLabeledRow(label: "\(entry.volumeML) mL \u{2022} \(entry.kind.displayName)") {
+                        AdaptiveLabeledRow(
+                            label: Text("\(entry.volumeML) mL").font(JP.Font.metricBody)
+                                + Text(" \u{2022} \(entry.kind.displayName)")
+                        ) {
                             Text(entry.timestamp, style: .time)
                                 .font(JP.Font.metricSmall)
                                 .foregroundStyle(JP.Color.secondaryText)
@@ -111,7 +119,7 @@ struct TrendsView: View {
                     }
                 }
 
-                Section("Recent Food") {
+                Section("Recent food") {
                     if foodEntries.isEmpty {
                         Text("No entries yet.").foregroundStyle(JP.Color.secondaryText)
                     }
@@ -119,7 +127,7 @@ struct TrendsView: View {
                         VStack(alignment: .leading) {
                             Text(entry.foodDescription)
                             Text(entry.timestamp, style: .date)
-                                .font(JP.Font.caption)
+                                .font(JP.Font.metricCaption)
                                 .foregroundStyle(JP.Color.secondaryText)
                         }
                     }
@@ -142,7 +150,7 @@ struct TrendsView: View {
                     }
                     .onDelete(perform: deleteMedications)
                 } header: {
-                    Text("Medications Tracked in J-Pouch")
+                    Text("Medications tracked in J-Pouch")
                 } footer: {
                     Text("Swipe to delete. Deleting a course also cancels its reminders. Medications from the Health app aren't listed here — manage those in Health.")
                 }

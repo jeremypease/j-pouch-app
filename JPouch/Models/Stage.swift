@@ -71,10 +71,10 @@ enum Stage: String, Codable, CaseIterable, Identifiable, Hashable {
 
     var displayName: String {
         switch self {
-        case .preOp: "Pre-Op"
-        case .stagedSurgery: "Staged Surgery"
+        case .preOp: "Pre-op"
+        case .stagedSurgery: "Staged surgery"
         case .adaptation: "Adaptation"
-        case .longTermMaintenance: "Long-Term Maintenance"
+        case .longTermMaintenance: "Long-term maintenance"
         }
     }
 

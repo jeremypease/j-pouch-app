@@ -171,7 +171,7 @@ private struct GreetingHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: JP.Spacing.sm) {
             Text(greeting)
-                .font(JP.Font.displayLarge)
+                .jpDisplayLarge()
                 .foregroundStyle(JP.Color.primaryText)
             Text(Date.now, format: .dateTime.weekday(.wide).month(.wide).day())
                 .font(JP.Font.callout)
@@ -365,7 +365,7 @@ private struct PatternStatusCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: JP.Spacing.sm) {
-            JPCardHeader(title: "Pattern Status", icon: "waveform.path.ecg")
+            JPCardHeader(title: "Pattern status", icon: "waveform.path.ecg")
 
             if isFlagged {
                 JPCaption("See the flags above. Keep logging — it's what makes these more accurate.")
@@ -417,7 +417,7 @@ private struct OutputSummaryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: JP.Spacing.md) {
-            JPCardHeader(title: "Output Today", icon: "chart.bar.fill")
+            JPCardHeader(title: "Output today", icon: "chart.bar.fill")
             JPMetric(value: "\(count)", unit: count == 1 ? "entry" : "entries")
             if let baseline {
                 JPCaption("Your usual is about \(baseline.formatted(.number.precision(.fractionLength(0)))) a day.")
@@ -433,10 +433,10 @@ private struct UpcomingSurgeryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: JP.Spacing.sm) {
-            JPCardHeader(title: "Your Timeline", icon: "calendar")
+            JPCardHeader(title: "Your timeline", icon: "calendar")
             if let date = profile.stagedSurgeryDate ?? profile.takedownDate {
                 Text(date, style: .date)
-                    .font(JP.Font.bodyMedium)
+                    .font(JP.Font.metricBody)
             } else {
                 JPCaption("Set your surgery date in Settings to see it here.")
             }
@@ -458,7 +458,9 @@ private struct TodaysLogCard: View {
         let id: PersistentIdentifier
         let time: Date
         let icon: String
-        let text: String
+        /// A `Text` rather than a `String` so the figure in each row can carry the mono face
+        /// while the words around it stay in the body face.
+        let text: Text
     }
 
     private var rows: [Row] {
@@ -467,7 +469,8 @@ private struct TodaysLogCard: View {
                 id: $0.persistentModelID,
                 time: $0.timestamp,
                 icon: "drop.circle.fill",
-                text: "Output · consistency \($0.consistency)/7"
+                text: Text("Output · consistency ")
+                    + Text("\($0.consistency)/7").font(JP.Font.metricCallout)
             )
         }
         let hydrationRows = hydration.map {
@@ -475,7 +478,8 @@ private struct TodaysLogCard: View {
                 id: $0.persistentModelID,
                 time: $0.timestamp,
                 icon: "waterbottle.fill",
-                text: "\($0.volumeML) mL · \($0.kind.displayName)"
+                text: Text("\($0.volumeML) mL").font(JP.Font.metricCallout)
+                    + Text(" · \($0.kind.displayName)")
             )
         }
         let symptomRows = symptoms.map {
@@ -483,7 +487,7 @@ private struct TodaysLogCard: View {
                 id: $0.persistentModelID,
                 time: $0.timestamp,
                 icon: "heart.text.square.fill",
-                text: $0.summaryLine
+                text: Text($0.summaryLine)
             )
         }
         return (outputRows + hydrationRows + symptomRows).sorted { $0.time > $1.time }
@@ -501,7 +505,7 @@ private struct TodaysLogCard: View {
                         Image(systemName: row.icon)
                             .foregroundStyle(JP.Color.accent)
                             .accessibilityHidden(true)
-                        Text(row.text)
+                        row.text
                             .font(JP.Font.callout)
                             .foregroundStyle(JP.Color.primaryText)
                         Spacer(minLength: JP.Spacing.sm)

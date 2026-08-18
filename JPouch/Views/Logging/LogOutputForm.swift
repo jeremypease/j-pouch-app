@@ -28,7 +28,7 @@ struct LogOutputForm: View {
                 timeSection
                 notesSection
 
-                Button("Save Entry") { save() }
+                Button("Save entry") { save() }
                     .buttonStyle(.jpPrimary)
                     .padding(.top, JP.Spacing.sm)
             }

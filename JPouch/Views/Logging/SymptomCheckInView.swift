@@ -31,14 +31,14 @@ struct SymptomCheckInView: View {
                     notesSection
                     timeSection
 
-                    Button("Save Check-In") { save() }
+                    Button("Save check-in") { save() }
                         .buttonStyle(.jpPrimary)
                         .padding(.top, JP.Spacing.sm)
                 }
                 .padding(JP.Spacing.lg)
             }
             .background(JP.Color.pageBackground)
-            .navigationTitle("Symptom Check-In")
+            .navigationTitle("Symptom check-in")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

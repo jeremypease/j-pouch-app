@@ -31,7 +31,7 @@ struct LogMedicationForm: View {
                         Text("Nothing shared with J-Pouch yet.")
                             .font(JP.Font.caption)
                             .foregroundStyle(JP.Color.secondaryText)
-                        Button("Share My Medications with J-Pouch") {
+                        Button("Share my medications with J-Pouch") {
                             Task {
                                 await healthKit.requestMedicationsAuthorization()
                                 healthMedications = (try? await healthKit.fetchMedications()) ?? []
@@ -46,22 +46,22 @@ struct LogMedicationForm: View {
                             }
                         }
                     }
-                    Button("Open Health App") {
+                    Button("Open Health app") {
                         openURL(URL(string: "x-apple-health://")!)
                     }
                 } header: {
-                    Text("Your Medications")
+                    Text("Your medications")
                 } footer: {
                     Text("Medications live in the Health app, under Browse → Medications. This is separate from the general Health connection in Settings — Apple requires picking which specific medications to share with each app, and re-asks every time you tap Share. If you've already shared some and don't see them here, tap Share again and check each one you want visible is switched on.")
                 }
             }
 
-            Section("Track a Course") {
+            Section("Track a course") {
                 TextField("Name", text: $name)
                 TextField("Dosage", text: $dosage)
                 TextField("Schedule (e.g. twice daily)", text: $schedule)
             }
-            Section("Antibiotic Course") {
+            Section("Antibiotic course") {
                 Toggle("This is an antibiotic course", isOn: $isAntibiotic)
                 DatePicker("Start date", selection: $startDate, displayedComponents: .date)
                 Toggle("Has end date", isOn: $hasEndDate)
@@ -80,7 +80,7 @@ struct LogMedicationForm: View {
                         )
                     }
                     .onDelete { reminderTimes.remove(atOffsets: $0) }
-                    Button("Add Reminder Time") {
+                    Button("Add reminder time") {
                         reminderTimes.append(ReminderTimeDraft(time: .now))
                     }
                 }
@@ -93,7 +93,7 @@ struct LogMedicationForm: View {
                 Button {
                     save()
                 } label: {
-                    Text("Save Entry").frame(maxWidth: .infinity)
+                    Text("Save entry").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)

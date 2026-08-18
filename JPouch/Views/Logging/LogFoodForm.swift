@@ -19,7 +19,7 @@ struct LogFoodForm: View {
                 Button {
                     save()
                 } label: {
-                    Text("Save Entry").frame(maxWidth: .infinity)
+                    Text("Save entry").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(foodDescription.trimmingCharacters(in: .whitespaces).isEmpty)
