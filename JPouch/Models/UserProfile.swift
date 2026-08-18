@@ -11,6 +11,38 @@ final class UserProfile {
     var takedownDate: Date?
     var dailyHydrationTargetML: Int = 2000
 
+    /// Minutes past midnight. Empty means that kind of reminder is off — no separate enabled
+    /// flag, so the two can never disagree about whether anything is scheduled.
+    var hydrationReminderMinutes: [Int] = []
+    var loggingReminderMinutes: [Int] = []
+    /// Kept alongside the times only so the settings UI can show which preset is selected;
+    /// the times are what actually gets scheduled.
+    var hydrationCadenceRawValue: String = ReminderCadence.standard.rawValue
+    var loggingCadenceRawValue: String = ReminderCadence.light.rawValue
+
+    func cadence(for kind: ReminderKind) -> ReminderCadence {
+        let raw = kind == .hydration ? hydrationCadenceRawValue : loggingCadenceRawValue
+        return ReminderCadence(rawValue: raw) ?? .default(for: kind)
+    }
+
+    func reminderMinutes(for kind: ReminderKind) -> [Int] {
+        kind == .hydration ? hydrationReminderMinutes : loggingReminderMinutes
+    }
+
+    /// Sets both halves together so a cadence can't end up describing times that aren't
+    /// scheduled. Custom keeps whatever times are passed in; every preset derives its own.
+    func setReminders(for kind: ReminderKind, cadence: ReminderCadence, customMinutes: [Int] = []) {
+        let minutes = cadence == .custom ? customMinutes.sorted() : cadence.times(for: kind)
+        switch kind {
+        case .hydration:
+            hydrationCadenceRawValue = cadence.rawValue
+            hydrationReminderMinutes = minutes
+        case .logging:
+            loggingCadenceRawValue = cadence.rawValue
+            loggingReminderMinutes = minutes
+        }
+    }
+
     var manualStageOverride: Stage? {
         get { manualStageRawValue.flatMap { Stage(rawValue: $0) } }
         set { manualStageRawValue = newValue?.rawValue }

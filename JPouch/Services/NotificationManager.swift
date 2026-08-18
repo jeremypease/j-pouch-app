@@ -147,6 +147,65 @@ final class NotificationManager {
         }
     }
 
+    // MARK: - Daily hydration and logging reminders
+
+    /// Replaces the daily reminders wholesale. Cancelling first means removing a time actually
+    /// removes it, rather than leaving an orphan firing forever with nothing in the app that
+    /// still refers to it.
+    func syncDailyReminders(_ schedules: [DailyReminderSchedule]) async {
+        await cancelDailyReminders()
+
+        for schedule in schedules {
+            let content = Self.content(for: schedule.kind)
+            for minute in schedule.minutes.sorted() {
+                var components = DateComponents()
+                components.hour = minute / 60
+                components.minute = minute % 60
+                await add(
+                    identifier: "\(Self.dailyPrefix)\(schedule.kind.rawValue)-\(minute)",
+                    content: content,
+                    trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+                )
+            }
+        }
+    }
+
+    func cancelDailyReminders() async {
+        let pending = await center.pendingNotificationRequests()
+        let ids = pending.map(\.identifier).filter { $0.hasPrefix(Self.dailyPrefix) }
+        guard !ids.isEmpty else { return }
+        center.removePendingNotificationRequests(withIdentifiers: ids)
+    }
+
+    /// Whether notifications are actually permitted. Reminders configured while permission is
+    /// denied silently never fire, so the UI needs to be able to say so rather than implying
+    /// something is set up when nothing will happen.
+    func isAuthorized() async -> Bool {
+        let settings = await center.notificationSettings()
+        return settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
+    }
+
+    /// Whether iOS will still show a permission prompt. Once someone has denied, it won't ask
+    /// again — the only route back is the Settings app, which the UI has to say out loud.
+    func canStillAsk() async -> Bool {
+        let settings = await center.notificationSettings()
+        return settings.authorizationStatus == .notDetermined
+    }
+
+    /// Returns whether permission ended up granted, so a caller can react rather than assume.
+    @discardableResult
+    func requestAuthorization() async -> Bool {
+        let settings = await center.notificationSettings()
+        switch settings.authorizationStatus {
+        case .notDetermined:
+            return (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+        case .denied:
+            return false
+        default:
+            return true
+        }
+    }
+
     func cancelReminders(forMedicationID id: UUID) async {
         let prefix = Self.identifierPrefix(for: id)
         let pending = await center.pendingNotificationRequests()
@@ -160,8 +219,27 @@ final class NotificationManager {
         try? await center.add(request)
     }
 
+    private static let dailyPrefix = "daily-"
+
     private static func identifierPrefix(for id: UUID) -> String {
         "medication-\(id)-"
+    }
+
+    private static func content(for kind: ReminderKind) -> UNNotificationContent {
+        let content = UNMutableNotificationContent()
+        // Deliberately plain and low-pressure. These arrive several times a day, every day, to
+        // someone already managing a chronic condition — anything that reads as scolding gets
+        // the whole category switched off, and then the app learns nothing.
+        switch kind {
+        case .hydration:
+            content.title = "Time for a drink"
+            content.body = "Logging it keeps your hydration trend accurate."
+        case .logging:
+            content.title = "Anything to log?"
+            content.body = "A quick entry now means your trends reflect the real day."
+        }
+        content.sound = .default
+        return content
     }
 
     private static func content(for reminder: MedicationReminder) -> UNNotificationContent {

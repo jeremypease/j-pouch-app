@@ -10,6 +10,46 @@ struct SettingsView: View {
 
     /// Permissions are changed outside the app, in Health, so the copy has to be clear that
     /// this screen can't turn them off — and honest that iOS hides read grants from us.
+    @State private var notificationsBlocked = false
+
+    /// Writing through the profile keeps cadence and times in step, and reschedules on every
+    /// change so what's pending always matches what the screen says.
+    private func cadenceBinding(for kind: ReminderKind) -> Binding<ReminderCadence> {
+        Binding(
+            get: { profile.cadence(for: kind) },
+            set: { newValue in
+                profile.setReminders(for: kind, cadence: newValue, customMinutes: profile.reminderMinutes(for: kind))
+                rescheduleReminders()
+            }
+        )
+    }
+
+    private func minutesBinding(for kind: ReminderKind) -> Binding<[Int]> {
+        Binding(
+            get: { profile.reminderMinutes(for: kind) },
+            set: { newValue in
+                profile.setReminders(for: kind, cadence: profile.cadence(for: kind), customMinutes: newValue)
+                rescheduleReminders()
+            }
+        )
+    }
+
+    private func rescheduleReminders() {
+        let schedules = [
+            DailyReminderSchedule(kind: .hydration, minutes: profile.hydrationReminderMinutes),
+            DailyReminderSchedule(kind: .logging, minutes: profile.loggingReminderMinutes),
+        ]
+        Task {
+            if schedules.contains(where: \.isOn) {
+                await NotificationManager.shared.requestAuthorization()
+            }
+            await NotificationManager.shared.syncDailyReminders(schedules)
+            // Hoisted out of the && : its right-hand side is an autoclosure, which can't await.
+            let authorized = await NotificationManager.shared.isAuthorized()
+            notificationsBlocked = schedules.contains(where: \.isOn) && !authorized
+        }
+    }
+
     private var healthFooter: String {
         let medications = healthKit.supportsMedicationsAPI
             ? " Medication sharing is a separate permission — manage it under Log → Meds."
@@ -112,6 +152,24 @@ struct SettingsView: View {
                         step: 250
                     )
                 }
+
+                Section {
+                    ForEach(ReminderKind.allCases) { kind in
+                        ReminderCadenceCard(
+                            kind: kind,
+                            cadence: cadenceBinding(for: kind),
+                            minutes: minutesBinding(for: kind)
+                        )
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                    }
+                } header: {
+                    Text("Reminders")
+                } footer: {
+                    if notificationsBlocked {
+                        Text("Notifications are turned off for J-Pouch, so none of these can be delivered. Turn them on in the Settings app under Notifications → J-Pouch.")
+                    }
+                }
                 Section {
                     // Plain HStack rather than LabeledContent: giving LabeledContent a custom
                     // content view (rather than a plain value) made the row grow to an odd
@@ -181,6 +239,10 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .task {
                 await healthKit.refreshConnectionState()
+                let wantsReminders = !profile.hydrationReminderMinutes.isEmpty
+                    || !profile.loggingReminderMinutes.isEmpty
+                let authorized = await NotificationManager.shared.isAuthorized()
+                notificationsBlocked = wantsReminders && !authorized
             }
             .onChange(of: scenePhase) { _, phase in
                 // Permissions can be changed in the Health app while we're backgrounded,

@@ -7,7 +7,7 @@ struct OnboardingView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private enum Step: Int, CaseIterable {
-        case stage, health
+        case stage, health, reminders
     }
 
     @State private var step: Step = .stage
@@ -28,6 +28,13 @@ struct OnboardingView: View {
     @State private var isConnectingHealth = false
     @State private var weightLookupMessage: String?
 
+    // Reminders
+    @State private var hydrationCadence: ReminderCadence = .default(for: .hydration)
+    @State private var hydrationMinutes: [Int] = ReminderCadence.default(for: .hydration).times(for: .hydration)
+    @State private var loggingCadence: ReminderCadence = .default(for: .logging)
+    @State private var loggingMinutes: [Int] = ReminderCadence.default(for: .logging).times(for: .logging)
+    @State private var notificationsDenied = false
+
     private var suggestedHydrationTargetML: Int {
         // Rough starting point, not a medical recommendation: ~15 mL per lb (~33 mL/kg,
         // a commonly cited general fluid guideline) plus a buffer for pouch fluid loss.
@@ -46,10 +53,11 @@ struct OnboardingView: View {
                     switch step {
                     case .stage: stageStep
                     case .health: healthStep
+                    case .reminders: remindersStep
                     }
                 }
 
-                Button(step == .health ? "Finish" : "Continue") {
+                Button(step == .reminders ? "Finish" : "Continue") {
                     advance()
                 }
                 .buttonStyle(.jpPrimary)
@@ -318,6 +326,42 @@ struct OnboardingView: View {
         }
     }
 
+    // MARK: - Reminders
+
+    private var remindersStep: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.xl) {
+            StepHeader(
+                title: "Reminders",
+                subtitle: "Sensible defaults are set already — adjust them now or later in Settings."
+            )
+
+            ReminderCadenceCard(kind: .hydration, cadence: $hydrationCadence, minutes: $hydrationMinutes)
+            ReminderCadenceCard(kind: .logging, cadence: $loggingCadence, minutes: $loggingMinutes)
+
+            if notificationsDenied {
+                VStack(alignment: .leading, spacing: JP.Spacing.sm) {
+                    Label("Notifications are turned off", systemImage: "bell.slash.fill")
+                        .font(JP.Font.headline)
+                        .foregroundStyle(JP.Color.attention)
+                    // Without this the reminders look configured while nothing would ever
+                    // arrive, which is worse than not offering them at all.
+                    JPCaption("Your choices are saved, but nothing can be delivered until notifications are allowed for J-Pouch in the Settings app.")
+                }
+                .jpCard()
+            } else {
+                JPCaption("iOS will ask permission when you finish. Reminders only fire at the times shown — never overnight.")
+            }
+        }
+        .padding(.horizontal, JP.Spacing.lg)
+        .task {
+            // Someone re-running onboarding after previously denying would otherwise be told
+            // reminders are set when they can't be.
+            let authorized = await NotificationManager.shared.isAuthorized()
+            let canAsk = await NotificationManager.shared.canStillAsk()
+            notificationsDenied = !authorized && !canAsk
+        }
+    }
+
     // MARK: - Navigation
 
     private func advance() {
@@ -339,7 +383,23 @@ struct OnboardingView: View {
             takedownDate: takedownDateValue,
             dailyHydrationTargetML: hydrationTargetML
         )
+        profile.setReminders(for: .hydration, cadence: hydrationCadence, customMinutes: hydrationMinutes)
+        profile.setReminders(for: .logging, cadence: loggingCadence, customMinutes: loggingMinutes)
         modelContext.insert(profile)
+
+        // Snapshot the values before going async: the schedules are plain Ints, so nothing
+        // carries a SwiftData model across the boundary.
+        let schedules = [
+            DailyReminderSchedule(kind: .hydration, minutes: profile.hydrationReminderMinutes),
+            DailyReminderSchedule(kind: .logging, minutes: profile.loggingReminderMinutes),
+        ]
+        Task {
+            // Asked here rather than on the reminders step so the prompt lands once the person
+            // has finished choosing, not in the middle of it.
+            guard schedules.contains(where: \.isOn) else { return }
+            guard await NotificationManager.shared.requestAuthorization() else { return }
+            await NotificationManager.shared.syncDailyReminders(schedules)
+        }
     }
 }
 

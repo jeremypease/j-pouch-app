@@ -79,6 +79,13 @@ struct MainTabView: View {
             // own — notifications don't sync with the data.
             let reminders = medications.map { $0.reminderSnapshot() }
             await NotificationManager.shared.sync(reminders)
+
+            // Daily reminders need the same treatment: a phone restored from iCloud has the
+            // schedule but none of the other device's pending notifications.
+            await NotificationManager.shared.syncDailyReminders([
+                DailyReminderSchedule(kind: .hydration, minutes: profile.hydrationReminderMinutes),
+                DailyReminderSchedule(kind: .logging, minutes: profile.loggingReminderMinutes),
+            ])
         }
     }
 }
