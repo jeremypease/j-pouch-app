@@ -108,6 +108,37 @@ final class HealthKitManager {
         try await store.delete(sample)
     }
 
+    /// Water logged in Health today by anything other than J-Pouch.
+    ///
+    /// Deliberately excludes our own samples. Every entry logged here is written to Health as
+    /// well as stored locally, so summing everything Health knows would count those twice.
+    /// Filtering by source means fluids logged in Health itself, or in another tracker, show up
+    /// without inflating the total — which is why read access to water was requested in the
+    /// first place, and until now was never actually used.
+    func waterLoggedElsewhereML(on date: Date = .now, calendar: Calendar = .current) async throws -> Int {
+        guard isHealthDataAvailable else { return 0 }
+        let start = calendar.startOfDay(for: date)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return 0 }
+
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [
+                .quantitySample(
+                    type: waterType,
+                    predicate: HKQuery.predicateForSamples(withStart: start, end: end)
+                )
+            ],
+            sortDescriptors: []
+        )
+        let samples = try await descriptor.result(for: store)
+        let ownBundleID = Bundle.main.bundleIdentifier
+
+        return samples
+            .filter { $0.sourceRevision.source.bundleIdentifier != ownBundleID }
+            .reduce(0) { total, sample in
+                total + Int(sample.quantity.doubleValue(for: .literUnit(with: .milli)).rounded())
+            }
+    }
+
     func latestBodyMassKG() async throws -> Double? {
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.quantitySample(type: bodyMassType)],

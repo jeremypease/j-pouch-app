@@ -9,12 +9,28 @@ struct HomeView: View {
     @Query(sort: \OutputEntry.timestamp, order: .reverse) private var outputEntries: [OutputEntry]
     @Query(sort: \SymptomEntry.timestamp, order: .reverse) private var symptomEntries: [SymptomEntry]
 
+    @Environment(\.scenePhase) private var scenePhase
     @State private var isShowingSymptomCheckIn = false
+    /// Fluids logged in Health rather than here — from Health itself, or another tracker.
+    @State private var externalWaterML = 0
 
-    private var todaysHydrationML: Int {
+    private var loggedHereTodayML: Int {
         hydrationEntries
             .filter { Calendar.current.isDateInToday($0.timestamp) }
             .reduce(0) { $0 + $1.volumeML }
+    }
+
+    /// What the person has actually drunk today, wherever they recorded it. Counting only our
+    /// own entries meant someone who logs water in Health, or in a dedicated water app, saw
+    /// zero here and a dehydration nudge they had already acted on.
+    private var todaysHydrationML: Int {
+        loggedHereTodayML + externalWaterML
+    }
+
+    private func refreshExternalWater() async {
+        // Silent on failure: this is a supplement to what was logged here, and an error banner
+        // over a hydration figure would be more alarming than useful.
+        externalWaterML = (try? await HealthKitManager.shared.waterLoggedElsewhereML()) ?? 0
     }
 
     private var todaysOutputCount: Int {
@@ -61,19 +77,35 @@ struct HomeView: View {
 
                     switch profile.stage {
                     case .adaptation:
-                        HydrationCard(currentML: todaysHydrationML, targetML: profile.dailyHydrationTargetML)
+                        HydrationCard(
+                            currentML: todaysHydrationML,
+                            targetML: profile.dailyHydrationTargetML,
+                            fromHealthML: externalWaterML
+                        )
                         OutputSummaryCard(count: todaysOutputCount, baseline: analysis.baselineOutputPerDay)
                         PatternStatusCard(analysis: analysis)
                     case .longTermMaintenance:
                         PatternStatusCard(analysis: analysis)
-                        HydrationCard(currentML: todaysHydrationML, targetML: profile.dailyHydrationTargetML)
+                        HydrationCard(
+                            currentML: todaysHydrationML,
+                            targetML: profile.dailyHydrationTargetML,
+                            fromHealthML: externalWaterML
+                        )
                         OutputSummaryCard(count: todaysOutputCount, baseline: analysis.baselineOutputPerDay)
                     case .stagedSurgery:
-                        HydrationCard(currentML: todaysHydrationML, targetML: profile.dailyHydrationTargetML)
+                        HydrationCard(
+                            currentML: todaysHydrationML,
+                            targetML: profile.dailyHydrationTargetML,
+                            fromHealthML: externalWaterML
+                        )
                         UpcomingSurgeryCard(profile: profile)
                     case .preOp:
                         UpcomingSurgeryCard(profile: profile)
-                        HydrationCard(currentML: todaysHydrationML, targetML: profile.dailyHydrationTargetML)
+                        HydrationCard(
+                            currentML: todaysHydrationML,
+                            targetML: profile.dailyHydrationTargetML,
+                            fromHealthML: externalWaterML
+                        )
                     }
 
                     TodaysLogCard(
@@ -90,6 +122,15 @@ struct HomeView: View {
             }
             .background(JP.Color.pageBackground)
             .navigationTitle("J-Pouch")
+            .task {
+                await refreshExternalWater()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                // Coming back from the Health app, or from any other tracker, should show the
+                // fluids logged while away rather than yesterday's figure.
+                guard phase == .active else { return }
+                Task { await refreshExternalWater() }
+            }
             .sheet(isPresented: $isShowingSymptomCheckIn) {
                 SymptomCheckInView()
             }
@@ -343,6 +384,7 @@ private struct PatternStatusCard: View {
 private struct HydrationCard: View {
     let currentML: Int
     let targetML: Int
+    var fromHealthML = 0
 
     private var progress: Double {
         guard targetML > 0 else { return 0 }
@@ -358,7 +400,11 @@ private struct HydrationCard: View {
             // least legible thing on the screen.
             JPMetric(value: "\(currentML)", unit: "mL")
             JPProgressBar(progress: progress)
-            JPCaption("of \(targetML) mL today")
+            // Says where the number came from, so a total larger than what was tapped in here
+            // doesn't look like a bug.
+            JPCaption(fromHealthML > 0
+                ? "of \(targetML) mL today, including \(fromHealthML) mL from Health"
+                : "of \(targetML) mL today")
         }
         .jpCard()
         .accessibilityElement(children: .combine)
