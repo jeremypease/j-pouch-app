@@ -17,67 +17,81 @@ extension JP {
     /// AppIcon.appiconset/icon-1024.png`) — a cyan-leaning teal background and a coral/salmon
     /// glyph — rather than guessed at before a real icon existed. Emerald/rose are unrelated to
     /// the icon and unchanged.
+    /// Straight from the design system export (`tokens/colors.css`). Teal is the primary,
+    /// tan is the sole accent, and the neutrals are deliberately warm rather than blue-grey.
+    ///
+    /// The brief is explicit that semantic colours stay in the same warm-muted family: this is a
+    /// body-function tracker, and loud success/fail colour reads punitive. So no saturated red
+    /// or green — danger is a muted brick, success is simply a deeper teal.
     fileprivate enum Ramp {
-        static let teal50: UInt32 = 0xEDF7F7
-        static let teal100: UInt32 = 0xD5ECEC
-        static let teal400: UInt32 = 0x4DB2B1
-        static let teal500: UInt32 = 0x2F7978
-        static let teal600: UInt32 = 0x256563
-        static let teal700: UInt32 = 0x1C4F4E
-        static let teal900: UInt32 = 0x0E2A2A
+        static let teal900: UInt32 = 0x12271F
+        static let teal800: UInt32 = 0x183A2F
+        static let teal700: UInt32 = 0x215849
+        static let teal600: UInt32 = 0x2C6B58
+        static let teal500: UInt32 = 0x3C7A6A
+        static let teal400: UInt32 = 0x5A9484
+        static let teal300: UInt32 = 0x7FB5A6
+        static let teal200: UInt32 = 0xA8CDC0
+        static let teal100: UInt32 = 0xD3E8E0
+        static let teal50: UInt32 = 0xEAF5F2
 
-        static let coral300: UInt32 = 0xED9982
-        static let coral400: UInt32 = 0xE96C49
-        static let coral500: UInt32 = 0xDF4920
-        static let coral600: UInt32 = 0xB83F1E
+        static let tan700: UInt32 = 0xA8703E
+        static let tan600: UInt32 = 0xC98A52
+        static let tan500: UInt32 = 0xE0A568
+        static let tan400: UInt32 = 0xE8B384
+        static let tan300: UInt32 = 0xF0CBA3
+        static let tan100: UInt32 = 0xFAF0E3
 
-        static let emerald400: UInt32 = 0x34D399
-        static let emerald700: UInt32 = 0x047857
+        static let gray900: UInt32 = 0x1C211F
+        static let gray800: UInt32 = 0x2C332F
+        static let gray700: UInt32 = 0x3F4744
+        static let gray500: UInt32 = 0x6B756F
+        static let gray300: UInt32 = 0xA9B0AC
+        static let gray100: UInt32 = 0xE3E7E4
+        static let gray50: UInt32 = 0xF6F8F6
 
-        static let rose500: UInt32 = 0xF43F5E
-        static let rose700: UInt32 = 0xBE123C
+        static let white: UInt32 = 0xFFFFFF
+
+        static let red600: UInt32 = 0x9A4432
+        static let red500: UInt32 = 0xB0503F
+        static let red100: UInt32 = 0xF5E2DD
     }
 
     enum Color {
-        /// Text and interactive tint.
-        ///
-        /// Reads from `AccentColor` in the asset catalog, kept in sync with `Ramp.teal500`/
-        /// `teal300` here — 5.1:1 against white in light mode, comfortably past the 4.5:1 AA
-        /// threshold for text. The same brand teal still appears, as `brandFill`, wherever it's
-        /// a shape rather than text.
+        /// Text and interactive tint. Mirrors `AccentColor` in the asset catalog, which is set
+        /// to the same teal-500/teal-300 pair.
         static let accent = SwiftUI.Color.accentColor
 
-        /// The saturated brand teal, for filled shapes and progress — never for text on white.
-        static let brandFill = adaptive(light: Ramp.teal500, dark: Ramp.teal400)
+        /// The primary teal, for filled shapes and progress.
+        static let brandFill = adaptive(light: Ramp.teal500, dark: Ramp.teal300)
 
-        /// A wash for selected rows and icon circles.
+        /// Washes for selected rows and icon circles.
         static let brandSurface = adaptive(light: Ramp.teal50, dark: Ramp.teal900)
-        static let brandSurfaceStrong = adaptive(light: Ramp.teal100, dark: Ramp.teal700)
+        static let brandSurfaceStrong = adaptive(light: Ramp.teal100, dark: Ramp.teal800)
 
-        /// Pattern flags. Coral, never red: these mean "worth raising with your GI", not
-        /// "emergency", and J-Pouch never diagnoses. 5.1:1 against the light background, 6.9:1
-        /// against the dark background — both clear AA.
-        static let attention = adaptive(light: Ramp.coral600, dark: Ramp.coral300)
-        static let attentionFill = adaptive(light: Ramp.coral500, dark: Ramp.coral400)
+        /// Pattern flags map to the system's *warning*, not danger: they mean "worth raising
+        /// with your GI", and the brief rules out alarm colour for exactly this reason. Tan-700
+        /// rather than tan-400 for text, which needs the contrast.
+        static let attention = adaptive(light: Ramp.tan700, dark: Ramp.tan300)
+        static let attentionFill = adaptive(light: Ramp.tan500, dark: Ramp.tan400)
 
-        /// Something actually went wrong — a failed save or sync.
-        static let critical = adaptive(light: Ramp.rose700, dark: Ramp.rose500)
+        /// Reserved for something actually going wrong — a failed save or sync. Muted brick,
+        /// per the palette; never a saturated red.
+        static let critical = adaptive(light: Ramp.red600, dark: Ramp.red100)
 
-        static let confirmation = adaptive(light: Ramp.emerald700, dark: Ramp.emerald400)
+        static let confirmation = adaptive(light: Ramp.teal600, dark: Ramp.teal300)
 
-        /// The pale mint the design specifies, sampled from it directly (#EAF5F2), rather than
-        /// the system grouped grey. Cards stay on the system surface colours below, so white
-        /// cards still read as raised against it.
-        ///
-        /// Dark mode keeps the system grouped black: a mint tint that works in daylight becomes
-        /// a murky wash at night, and the design only covers the light appearance.
-        static let pageBackground = adaptive(light: 0xEAF5F2, dark: 0x000000)
-        static let cardSurface = SwiftUI.Color(uiColor: .secondarySystemGroupedBackground)
-        static let inputSurface = SwiftUI.Color(uiColor: .tertiarySystemGroupedBackground)
-        static let separator = SwiftUI.Color(uiColor: .separator)
+        /// Pale teal page, white cards. Dark mode uses the darkest teal rather than black, so
+        /// the warm-teal cast survives at night instead of going neutral.
+        static let pageBackground = adaptive(light: Ramp.teal50, dark: Ramp.teal900)
+        static let cardSurface = adaptive(light: Ramp.white, dark: Ramp.teal800)
+        static let inputSurface = adaptive(light: Ramp.gray50, dark: Ramp.teal700)
+        static let separator = adaptive(light: Ramp.gray100, dark: Ramp.teal700)
 
-        static let primaryText = SwiftUI.Color.primary
-        static let secondaryText = SwiftUI.Color.secondary
+        /// Warm greys, not the system blue-greys.
+        static let primaryText = adaptive(light: Ramp.gray900, dark: Ramp.gray50)
+        static let secondaryText = adaptive(light: Ramp.gray700, dark: Ramp.gray300)
+        static let mutedText = adaptive(light: Ramp.gray500, dark: Ramp.gray300)
 
         private static func adaptive(light: UInt32, dark: UInt32) -> SwiftUI.Color {
             SwiftUI.Color(uiColor: UIColor { traits in
@@ -107,24 +121,30 @@ extension JP {
         static let sm: CGFloat = 8
         static let md: CGFloat = 12
         static let lg: CGFloat = 16
+        static let ml: CGFloat = 20
         static let xl: CGFloat = 24
         static let xxl: CGFloat = 32
+        static let xxxl: CGFloat = 40
+        static let section: CGFloat = 48
     }
 
     enum Radius {
-        static let card: CGFloat = 16
-        static let control: CGFloat = 12
-        /// Buttons are pills in the design. Larger than any button's half-height, so the shape
-        /// stays fully rounded whatever the label or text size does to it.
-        static let button: CGFloat = 32
-        static let tag: CGFloat = 8
+        /// "Rounded but not pill-happy" — the spec is explicit: cards 20, buttons and inputs 14,
+        /// and only small chips and badges go fully round.
+        static let card: CGFloat = 20
+        static let control: CGFloat = 14
+        static let button: CGFloat = 14
+        static let input: CGFloat = 12
+        static let tag: CGFloat = 999
     }
 
     /// Barely-there elevation. Enough to lift a card off the page without the drop shadows of a
     /// decade ago.
+    /// `--shadow-sm` from the export: cards lift barely off the background, nothing floats.
+    /// The tint is the warm near-black the system uses for shadows, not pure black.
     enum Shadow {
-        static let color = SwiftUI.Color.black.opacity(0.06)
-        static let radius: CGFloat = 8
+        static let color = SwiftUI.Color(red: 28/255, green: 33/255, blue: 31/255).opacity(0.07)
+        static let radius: CGFloat = 6
         static let y: CGFloat = 2
     }
 
