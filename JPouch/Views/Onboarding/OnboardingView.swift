@@ -7,10 +7,10 @@ struct OnboardingView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private enum Step: Int, CaseIterable {
-        case stage, health, reminders
+        case welcome, stage, health, reminders
     }
 
-    @State private var step: Step = .stage
+    @State private var step: Step = .welcome
 
     // Stage
     @State private var selectedStage: Stage = .adaptation
@@ -45,17 +45,22 @@ struct OnboardingView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: JP.Spacing.xl) {
-                StepIndicator(current: step.rawValue, total: Step.allCases.count)
-                    .padding(.top, JP.Spacing.xl)
-                    .padding(.horizontal, JP.Spacing.lg)
-
                 ScrollView {
-                    switch step {
-                    case .stage: stageStep
-                    case .health: healthStep
-                    case .reminders: remindersStep
+                    Group {
+                        switch step {
+                        case .welcome: welcomeStep
+                        case .stage: stageStep
+                        case .health: healthStep
+                        case .reminders: remindersStep
+                        }
                     }
+                    .padding(.top, JP.Spacing.xl)
                 }
+
+                // Sits just above the button, as the design has it, so the content above gets
+                // the full height rather than losing a band of it to a progress bar.
+                StepIndicator(current: step.rawValue, total: Step.allCases.count)
+                    .padding(.horizontal, JP.Spacing.lg)
 
                 Button(step == .reminders ? "Finish" : "Continue") {
                     advance()
@@ -66,6 +71,39 @@ struct OnboardingView: View {
             }
             .background(JP.Color.pageBackground)
         }
+    }
+
+    // MARK: - Welcome
+
+    private var welcomeStep: some View {
+        VStack(spacing: JP.Spacing.xl) {
+            Spacer(minLength: JP.Spacing.xl)
+
+            Image("AppMark")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .shadow(color: .black.opacity(0.08), radius: 18, y: 8)
+                // The name and tagline below say all of this; the icon is decoration.
+                .accessibilityHidden(true)
+
+            VStack(spacing: JP.Spacing.md) {
+                Text("Welcome to J-Pouch")
+                    .font(JP.Font.displayLarge)
+                    .multilineTextAlignment(.center)
+                Text("Your companion for j-pouch surgery, recovery, and life after — one place to track how you're doing.")
+                    .font(JP.Font.callout)
+                    .foregroundStyle(JP.Color.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: JP.Spacing.xl)
+        }
+        .frame(maxWidth: .infinity)
+        .containerRelativeFrame(.vertical, alignment: .center)
+        .padding(.horizontal, JP.Spacing.xl)
     }
 
     // MARK: - Stage
@@ -410,21 +448,21 @@ private struct StepIndicator: View {
     let total: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: JP.Spacing.sm) {
-            Text("Step \(current + 1) of \(total)")
-                .font(JP.Font.label)
-                .foregroundStyle(JP.Color.secondaryText)
-            HStack(spacing: JP.Spacing.xs) {
-                ForEach(0..<total, id: \.self) { index in
-                    Capsule()
-                        .fill(index <= current ? JP.Color.brandFill : JP.Color.separator)
-                        .frame(height: 4)
-                }
+        HStack(spacing: JP.Spacing.sm) {
+            ForEach(0..<total, id: \.self) { index in
+                Capsule()
+                    .fill(index == current ? JP.Color.brandFill : JP.Color.separator)
+                    // The current step widens into a pill, as the design shows, so position is
+                    // readable without counting dots.
+                    .frame(width: index == current ? 22 : 7, height: 7)
             }
-            // The text above says the same thing, and four capsules read as noise in VoiceOver.
-            .accessibilityHidden(true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
+        .animation(.easeInOut(duration: 0.2), value: current)
+        // These are now the only progress signal, the step count text having gone, so they
+        // carry it for VoiceOver rather than being hidden as decoration.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Step \(current + 1) of \(total)")
     }
 }
 

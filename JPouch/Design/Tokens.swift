@@ -65,10 +65,13 @@ extension JP {
 
         static let confirmation = adaptive(light: Ramp.emerald700, dark: Ramp.emerald400)
 
-        /// Cards read as raised surfaces against the grouped background. Using the system
-        /// grouped colours rather than fixed greys keeps dark mode and Increase Contrast working
-        /// without a second palette.
-        static let pageBackground = SwiftUI.Color(uiColor: .systemGroupedBackground)
+        /// The pale mint the design specifies, sampled from it directly (#EAF5F2), rather than
+        /// the system grouped grey. Cards stay on the system surface colours below, so white
+        /// cards still read as raised against it.
+        ///
+        /// Dark mode keeps the system grouped black: a mint tint that works in daylight becomes
+        /// a murky wash at night, and the design only covers the light appearance.
+        static let pageBackground = adaptive(light: 0xEAF5F2, dark: 0x000000)
         static let cardSurface = SwiftUI.Color(uiColor: .secondarySystemGroupedBackground)
         static let inputSurface = SwiftUI.Color(uiColor: .tertiarySystemGroupedBackground)
         static let separator = SwiftUI.Color(uiColor: .separator)
@@ -111,6 +114,9 @@ extension JP {
     enum Radius {
         static let card: CGFloat = 16
         static let control: CGFloat = 12
+        /// Buttons are pills in the design. Larger than any button's half-height, so the shape
+        /// stays fully rounded whatever the label or text size does to it.
+        static let button: CGFloat = 32
         static let tag: CGFloat = 8
     }
 

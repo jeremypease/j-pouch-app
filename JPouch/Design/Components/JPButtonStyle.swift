@@ -25,7 +25,10 @@ struct JPButtonStyle: ButtonStyle {
             .padding(.vertical, JP.Spacing.md)
             .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: JP.Layout.minimumTapTarget)
             .background {
-                let shape = RoundedRectangle(cornerRadius: JP.Radius.control, style: .continuous)
+                // Fully rounded, as the design draws it. Kept local to buttons rather than
+                // widening JP.Radius.control, which text fields and other controls also use and
+                // which the design says nothing about.
+                let shape = RoundedRectangle(cornerRadius: JP.Radius.button, style: .continuous)
                 switch variant {
                 case .primary:
                     shape.fill(JP.Color.brandFill)
