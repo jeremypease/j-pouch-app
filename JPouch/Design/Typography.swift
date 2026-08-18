@@ -15,6 +15,11 @@ extension JP {
         /// at all. These were read out of the shipped files' name tables rather than guessed;
         /// a wrong name here fails silently by falling back to the system font.
         private enum Face {
+            /// The copy of Manrope-ExtraBold previously bundled reported itself as
+            /// "ManropeExtraLight-ExtraBold" — a mangled name from Google's variable-font
+            /// slicing. Nothing referenced it, so it registered and sat unused while the spec
+            /// asked for extrabold headings. Replaced with a build whose name matches.
+            static let displayHeavy = "Manrope-ExtraBold"
             static let display = "Manrope-Bold"
             static let displayMedium = "Manrope-SemiBold"
             static let heading = "Manrope-SemiBold"
@@ -29,7 +34,8 @@ extension JP {
         }
 
         // Headings — Manrope
-        static let displayLarge = SwiftUI.Font.custom(Face.display, size: 28, relativeTo: .largeTitle)
+        // Extrabold for the largest heading, per "headings use --weight-extrabold/--weight-bold".
+        static let displayLarge = SwiftUI.Font.custom(Face.displayHeavy, size: 28, relativeTo: .largeTitle)
         static let displayMedium = SwiftUI.Font.custom(Face.display, size: 22, relativeTo: .title2)
         static let title = SwiftUI.Font.custom(Face.heading, size: 18, relativeTo: .title3)
         static let headline = SwiftUI.Font.custom(Face.heading, size: 16, relativeTo: .headline)
@@ -53,7 +59,7 @@ extension JP {
 
         /// Names of every face the app expects to have registered, for the debug check below.
         fileprivate static let allFaces = [
-            Face.display, Face.displayMedium, Face.heading, Face.headingMedium,
+            Face.displayHeavy, Face.display, Face.displayMedium, Face.heading, Face.headingMedium,
             Face.body, Face.bodyMedium, Face.bodySemibold,
             Face.mono, Face.monoMedium,
         ]
