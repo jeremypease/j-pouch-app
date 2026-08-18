@@ -1,14 +1,6 @@
 import SwiftUI
 import SwiftData
 
-private struct MedicationDraft: Identifiable {
-    let id = UUID()
-    var name = ""
-    var dosage = ""
-    var schedule = ""
-    var isAntibiotic = false
-}
-
 struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
@@ -25,10 +17,7 @@ struct OnboardingView: View {
     @State private var knowsSurgeryDate = false
     @State private var surgeryDate = Date.now
 
-    // Medications
-    @State private var takingMedications = false
     @State private var healthKit = HealthKitManager.shared
-    @State private var draftMedications: [MedicationDraft] = []
 
     // Hydration
     @State private var knowsWeight = false
@@ -136,62 +125,14 @@ struct OnboardingView: View {
         return surgeryDate
     }
 
-    // MARK: - Health (medications + hydration)
+    // MARK: - Apple Health and hydration target
 
     private var healthStep: some View {
         VStack(alignment: .leading, spacing: JP.Spacing.xl) {
             StepHeader(
-                title: "Medications & Hydration",
-                subtitle: "Connecting Apple Health below is a single request that brings in your medications and your weight — no need to grant them separately."
+                title: "Connect Apple Health",
+                subtitle: "One connection, and J-Pouch stops asking you for things your phone already knows."
             )
-
-            VStack(alignment: .leading, spacing: JP.Spacing.md) {
-                JPCardHeader(title: "Medications", icon: "pills.fill")
-                Text("Are you currently taking any medications?")
-                    .font(JP.Font.callout)
-                    .foregroundStyle(JP.Color.secondaryText)
-
-                Picker("Taking medications", selection: $takingMedications) {
-                    Text("No").tag(false)
-                    Text("Yes").tag(true)
-                }
-                .pickerStyle(.segmented)
-
-                if takingMedications {
-                    if healthKit.supportsMedicationsAPI {
-                        VStack(alignment: .leading, spacing: JP.Spacing.md) {
-                            JPCaption("Add them in the Health app under Browse → Medications, then connect Apple Health below — J-Pouch will show them automatically, so you don't need to re-enter anything. Connecting brings up a separate prompt for picking which medications to share, so watch for two prompts, not one.")
-                            Button("Open Health App") {
-                                openURL(URL(string: "x-apple-health://")!)
-                            }
-                            .buttonStyle(.jpSecondary)
-                        }
-                    } else {
-                        VStack(alignment: .leading, spacing: JP.Spacing.lg) {
-                            ForEach($draftMedications) { $draft in
-                                VStack(alignment: .leading, spacing: JP.Spacing.md) {
-                                    JPTextField(label: "Name", placeholder: "e.g. Ciprofloxacin", text: $draft.name)
-                                    JPTextField(label: "Dosage", placeholder: "e.g. 500 mg", text: $draft.dosage)
-                                    JPTextField(label: "Schedule", placeholder: "e.g. twice daily", text: $draft.schedule)
-                                    Toggle("Antibiotic course", isOn: $draft.isAntibiotic)
-                                        .toggleStyle(.jpCheckbox)
-                                }
-                                .jpCard()
-                            }
-                            Button("Add Medication") {
-                                draftMedications.append(MedicationDraft())
-                            }
-                            .buttonStyle(.jpSecondary)
-                        }
-                        .onAppear {
-                            if draftMedications.isEmpty {
-                                draftMedications.append(MedicationDraft())
-                            }
-                        }
-                    }
-                }
-            }
-            .jpCard()
 
             healthConnectCard
 
@@ -200,6 +141,10 @@ struct OnboardingView: View {
             }
 
             VStack(alignment: .leading, spacing: JP.Spacing.md) {
+                JPCardHeader(title: "Weight", icon: "scalemass")
+                // A lone unlabelled toggle gave no clue why weight was being asked for once
+                // the medications block above it was removed.
+                JPCaption("Only used to suggest a starting fluid target. Skip it and set the target yourself below.")
                 Toggle("I'll enter my weight", isOn: $knowsWeight)
                     .toggleStyle(.jpCheckbox)
 
@@ -250,8 +195,11 @@ struct OnboardingView: View {
         }
     }
 
-    /// The Apple Health sub-step, given its own card so connecting reads as a distinct action
-    /// rather than one more control in a stack.
+    /// The one ask on this step. Previously it sat under a "are you taking any medications?"
+    /// yes/no that fed nothing but a draft form, above an "Open Health App" button offered
+    /// before connecting — so tapping it accomplished nothing, since J-Pouch couldn't read
+    /// anything from Health yet. Now there is a single action, with the reasons for it stated
+    /// up front, and the Health app is only mentioned once it can actually do something.
     @ViewBuilder
     private var healthConnectCard: some View {
         VStack(alignment: .leading, spacing: JP.Spacing.md) {
@@ -269,7 +217,30 @@ struct OnboardingView: View {
                 Spacer(minLength: 0)
             }
 
+            if healthKit.connectionState == .unavailable {
+                JPCaption("Apple Health isn't available on this device. You can still enter your weight below and log everything by hand.")
+            } else {
+                VStack(alignment: .leading, spacing: JP.Spacing.sm) {
+                    HealthBenefit(icon: "scalemass", text: "Reads your weight, so we can suggest a daily fluid target instead of guessing.")
+                    if healthKit.supportsMedicationsAPI {
+                        HealthBenefit(icon: "pills.fill", text: "Shows the medications you keep in Health, so you never type them twice.")
+                    }
+                    HealthBenefit(icon: "drop.fill", text: "Saves the water you log back to Health, alongside the rest of your health data.")
+                }
+                .padding(.vertical, JP.Spacing.xs)
+            }
+
             if healthKit.connectionState == .connected {
+                if healthKit.supportsMedicationsAPI {
+                    JPCaption("Medications live in the Health app — add them under Browse → Medications and they'll appear in J-Pouch. Picking which ones to share is a separate prompt, so expect to be asked twice.")
+                    Button("Open Health App") {
+                        openURL(URL(string: "x-apple-health://")!)
+                    }
+                    .buttonStyle(.jpSecondary)
+                } else {
+                    JPCaption("This version of iOS can't share medications with apps, so you can add yours any time under Log → Meds.")
+                }
+
                 // Connecting and reading the weight can fail independently, so being
                 // connected must not be a dead end when the value didn't come through.
                 if !weightFromHealth {
@@ -285,9 +256,7 @@ struct OnboardingView: View {
                     .buttonStyle(.jpSecondary)
                     .disabled(isConnectingHealth)
                 }
-            } else if healthKit.connectionState == .unavailable {
-                JPCaption("Apple Health isn't available on this device.")
-            } else {
+            } else if healthKit.connectionState != .unavailable {
                 // Covers .unknown as well as .notConnected. Unlike Settings, showing the
                 // button before the check completes is the right default here: this is
                 // first run, so almost nobody is connected yet, and the button is the
@@ -303,6 +272,8 @@ struct OnboardingView: View {
                 }
                 .buttonStyle(.jpSecondary)
                 .disabled(isConnectingHealth)
+
+                JPCaption("You can skip this and enter everything by hand — nothing here is required.")
             }
         }
         .jpCard()
@@ -369,18 +340,6 @@ struct OnboardingView: View {
             dailyHydrationTargetML: hydrationTargetML
         )
         modelContext.insert(profile)
-
-        if takingMedications {
-            for draft in draftMedications where !draft.name.trimmingCharacters(in: .whitespaces).isEmpty {
-                let entry = MedicationEntry(
-                    name: draft.name,
-                    dosage: draft.dosage,
-                    schedule: draft.schedule,
-                    isAntibiotic: draft.isAntibiotic
-                )
-                modelContext.insert(entry)
-            }
-        }
     }
 }
 
@@ -406,6 +365,26 @@ private struct StepIndicator: View {
             .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct HealthBenefit: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: JP.Spacing.sm) {
+            Image(systemName: icon)
+                .font(JP.Font.caption)
+                .foregroundStyle(JP.Color.brandFill)
+                .frame(width: 18)
+                // Decorative: each icon repeats the sentence beside it.
+                .accessibilityHidden(true)
+            Text(text)
+                .font(JP.Font.caption)
+                .foregroundStyle(JP.Color.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 
