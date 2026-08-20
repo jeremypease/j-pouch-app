@@ -23,13 +23,6 @@ targets:
         com.apple.developer.healthkit.access: []
         com.apple.developer.icloud-services: [CloudKit]
         com.apple.developer.icloud-container-identifiers: [iCloud.com.jeremypease.jpouch]
-        # Shared with JPouchWidget so both can open the same SwiftData store (see
-        # PersistenceSetup.swift). Must also be enabled on the App ID in the Apple Developer
-        # portal for team S6M9LCA6DC — xcodegen/Xcode can't do that part.
-        com.apple.security.application-groups: [group.com.jeremypease.jpouch]
-    dependencies:
-      - target: JPouchWidget
-        embed: true
     info:
       path: JPouch/Resources/Info.plist
       properties:
@@ -119,44 +112,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.jeremypease.jpouch.tests
         SWIFT_VERSION: "5.0"
         GENERATE_INFOPLIST_FILE: true
-  JPouchWidget:
-    type: app-extension
-    platform: iOS
-    deploymentTarget: "17.0"
-    sources:
-      - path: JPouchWidget
-      # Shares the schema and container setup with the app rather than duplicating it — the
-      # widget process needs to open the exact same SwiftData store. GIReport.swift is excluded:
-      # it isn't part of the persisted schema and pulls in PatternAnalyzer (Services), which the
-      # widget target doesn't otherwise need.
-      - path: JPouch/Models
-        excludes:
-          - "GIReport.swift"
-      - path: JPouch/Services/PersistenceSetup.swift
-    # DIAGNOSTIC: entitlements block temporarily removed entirely to test whether the App Group
-    # capability is what's tripping CoreSimulator's extension-placeholder install (still failing
-    # identically after ruling out widget content and the Info.plist generation mechanism — see
-    # PR #7 / plan "Follow-up 2"). Restore once this narrows it down.
-    info:
-      path: JPouchWidget/Info.plist
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.jeremypease.jpouch.widget
-        PRODUCT_NAME: JPouchWidget
-        SWIFT_VERSION: "5.0"
-        TARGETED_DEVICE_FAMILY: "1"
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
-        CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: S6M9LCA6DC
-        SKIP_INSTALL: YES
-        # DIAGNOSTIC: try Xcode's own widget-extension template combination
-        # (GENERATE_INFOPLIST_FILE + INFOPLIST_FILE merge, INFOPLIST_KEY_* for flat keys) instead
-        # of relying on `info: path:` alone, to see whether that's what CoreSimulator's
-        # extension-placeholder creation wants — CI has failed identically without this. See
-        # PR #7 / plan "Follow-up 2".
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: J-Pouch
 schemes:
   JPouch:
     build:
