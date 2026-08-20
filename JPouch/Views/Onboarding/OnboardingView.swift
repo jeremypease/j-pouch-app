@@ -44,6 +44,7 @@ struct OnboardingView: View {
     @State private var selectedStage: Stage = .adaptation
     @State private var knowsSurgeryDate = false
     @State private var surgeryDate = Date.now
+    @State private var hasOstomy = false
 
     @State private var healthKit = HealthKitManager.shared
 
@@ -218,6 +219,13 @@ struct OnboardingView: View {
                     .font(JP.Font.callout)
                 }
                 JPCaption("Optional, but it lets J-Pouch move you between stages on its own instead of waiting for you to update it.")
+            }
+            .jpCard()
+
+            VStack(alignment: .leading, spacing: JP.Spacing.md) {
+                Toggle("I currently have an ostomy", isOn: $hasOstomy)
+                    .font(JP.Font.callout)
+                JPCaption("Changes a couple of questions in Output logging that only make sense for a pouch. You can change this anytime in Settings.")
             }
             .jpCard()
         }
@@ -482,7 +490,8 @@ struct OnboardingView: View {
             ),
             stagedSurgeryDate: stagedSurgeryDateValue,
             takedownDate: takedownDateValue,
-            dailyHydrationTargetML: hydrationTargetML
+            dailyHydrationTargetML: hydrationTargetML,
+            hasOstomy: hasOstomy
         )
         profile.setReminders(for: .hydration, cadence: hydrationCadence, customMinutes: hydrationMinutes)
         profile.setReminders(for: .logging, cadence: loggingCadence, customMinutes: loggingMinutes)
@@ -506,29 +515,6 @@ struct OnboardingView: View {
 
 // MARK: - Pieces
 
-private struct StepIndicator: View {
-    let current: Int
-    let total: Int
-
-    var body: some View {
-        HStack(spacing: JP.Spacing.sm) {
-            ForEach(0..<total, id: \.self) { index in
-                Capsule()
-                    .fill(index == current ? JP.Color.brandFill : JP.Color.separator)
-                    // The current step widens into a pill, as the design shows, so position is
-                    // readable without counting dots.
-                    .frame(width: index == current ? 22 : 7, height: 7)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .animation(.easeInOut(duration: 0.2), value: current)
-        // These are now the only progress signal, the step count text having gone, so they
-        // carry it for VoiceOver rather than being hidden as decoration.
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Step \(current + 1) of \(total)")
-    }
-}
-
 private struct HealthBenefit: View {
     let icon: String
     let text: String
@@ -545,20 +531,6 @@ private struct HealthBenefit: View {
                 .font(JP.Font.caption)
                 .foregroundStyle(JP.Color.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
-
-private struct StepHeader: View {
-    let title: String
-    let subtitle: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: JP.Spacing.sm) {
-            Text(title).jpDisplayMedium()
-            Text(subtitle)
-                .font(JP.Font.callout)
-                .foregroundStyle(JP.Color.secondaryText)
         }
     }
 }

@@ -63,7 +63,7 @@ struct MainTabView: View {
             HomeView(profile: profile, selectedTab: $selectedTab)
                 .tabItem { Label("Home", systemImage: "house") }
                 .tag(MainTab.home)
-            LogView()
+            LogView(profile: profile)
                 .tabItem { Label("Log", systemImage: "plus.circle") }
                 .tag(MainTab.log)
             TrendsView(profile: profile)

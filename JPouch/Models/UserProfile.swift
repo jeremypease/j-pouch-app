@@ -10,6 +10,11 @@ final class UserProfile {
     var stagedSurgeryDate: Date?
     var takedownDate: Date?
     var dailyHydrationTargetML: Int = 2000
+    /// Whether the user currently has an ostomy, independent of `Stage` (which is purely
+    /// date-derived). Scoped deliberately narrow — the PRD's fuller "surgical pathway" concept
+    /// (single-stage/two-stage/etc.) is P1 and not built yet; a future pathway enum will likely
+    /// supersede or wrap this field rather than the reverse, so don't widen this into one now.
+    var hasOstomy: Bool = false
 
     /// Minutes past midnight. Empty means that kind of reminder is off — no separate enabled
     /// flag, so the two can never disagree about whether anything is scheduled.
@@ -63,12 +68,14 @@ final class UserProfile {
         stagedSurgeryDate: Date? = nil,
         takedownDate: Date? = nil,
         dailyHydrationTargetML: Int = 2000,
+        hasOstomy: Bool = false,
         createdAt: Date = .now
     ) {
         self.manualStageRawValue = manualStage?.rawValue
         self.stagedSurgeryDate = stagedSurgeryDate
         self.takedownDate = takedownDate
         self.dailyHydrationTargetML = dailyHydrationTargetML
+        self.hasOstomy = hasOstomy
         self.createdAt = createdAt
     }
 }

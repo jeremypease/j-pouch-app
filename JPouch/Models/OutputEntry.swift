@@ -20,6 +20,23 @@ enum PouchConsistency {
     }
 }
 
+/// Presentational only, like `PouchConsistency` above — `pain` stays a plain `Int`, so this is
+/// a label lookup, not a persisted enum.
+enum PainLevel {
+    static let summaries: [Int: String] = [
+        0: "No pain",
+        1: "Mild, barely notice it",
+        2: "Noticeable, but doesn't stop you",
+        3: "Distracting — hard to ignore",
+        4: "Significant — hard to focus through",
+        5: "Severe, hard to ignore",
+    ]
+
+    static func summary(for level: Int) -> String {
+        summaries[level] ?? ""
+    }
+}
+
 enum BloodLevel: String, Codable, CaseIterable, Identifiable {
     case none, streaks, significant
     var id: String { rawValue }

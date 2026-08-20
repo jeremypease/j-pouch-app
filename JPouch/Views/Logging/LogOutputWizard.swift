@@ -1,8 +1,21 @@
 import SwiftUI
 import SwiftData
 
-struct LogOutputForm: View {
+/// Steps through an Output (BM) entry rather than presenting every field on one screen —
+/// replaces the old single-page `LogOutputForm`. Presented as a sheet from `LogView`, mirroring
+/// `SymptomCheckInView`'s existing sheet-with-`NavigationStack` pattern.
+struct LogOutputWizard: View {
+    let profile: UserProfile
+
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    private enum Step: Int, CaseIterable {
+        case consistencyBlood, urgencyPain, timeNotes
+    }
+
+    @State private var step: Step = .consistencyBlood
+    @State private var goingBack = false
 
     @State private var consistency = 4
     @State private var hasUrgency = false
@@ -12,31 +25,88 @@ struct LogOutputForm: View {
     @State private var isNight = false
     @State private var notes = ""
     /// nil means "whenever Save is tapped". Deliberately not a plain Date defaulting to now:
-    /// a form left open for an hour would otherwise save the time it was opened.
+    /// a wizard left open for an hour would otherwise save the time it was opened.
     @State private var backdatedTo: Date?
     @State private var didSave = false
 
     private var isBackdating: Bool { backdatedTo != nil }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: JP.Spacing.lg) {
-                consistencySection
-                urgencySection
-                bloodSection
-                painSection
-                timeSection
-                notesSection
+        NavigationStack {
+            VStack(spacing: JP.Spacing.xl) {
+                ScrollView {
+                    Group {
+                        switch step {
+                        case .consistencyBlood: consistencyBloodStep
+                        case .urgencyPain: urgencyPainStep
+                        case .timeNotes: timeNotesStep
+                        }
+                    }
+                    .padding(.top, JP.Spacing.lg)
+                }
 
-                Button("Save entry") { save() }
-                    .buttonStyle(.jpPrimary)
-                    .padding(.top, JP.Spacing.sm)
+                StepIndicator(current: step.rawValue, total: Step.allCases.count)
+                    .padding(.horizontal, JP.Spacing.lg)
+
+                WizardFooter(
+                    canGoBack: step != .consistencyBlood,
+                    isLastStep: step == .timeNotes,
+                    back: goBack,
+                    next: advance
+                )
+                .padding(.horizontal, JP.Spacing.lg)
+                .padding(.bottom, JP.Spacing.xl)
             }
-            .padding(JP.Spacing.lg)
+            .background(JP.Color.pageBackground)
+            .navigationTitle("Log output")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+            .jpSaveConfirmation(isShowing: didSave)
         }
-        .background(JP.Color.pageBackground)
-        .jpSaveConfirmation(isShowing: didSave)
     }
+
+    // MARK: - Steps
+
+    private var consistencyBloodStep: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.lg) {
+            consistencySection
+            bloodSection
+        }
+        .padding(.horizontal, JP.Spacing.lg)
+        .id(Step.consistencyBlood)
+        .transition(stepTransition)
+    }
+
+    private var urgencyPainStep: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.lg) {
+            // Urgency doesn't apply without a sphincter involved — asking is noise at best and
+            // alarming at worst for someone with an ostomy, so the block is skipped entirely
+            // rather than shown and discarded.
+            if !profile.hasOstomy {
+                urgencySection
+            }
+            painSection
+        }
+        .padding(.horizontal, JP.Spacing.lg)
+        .id(Step.urgencyPain)
+        .transition(stepTransition)
+    }
+
+    private var timeNotesStep: some View {
+        VStack(alignment: .leading, spacing: JP.Spacing.lg) {
+            timeSection
+            notesSection
+        }
+        .padding(.horizontal, JP.Spacing.lg)
+        .id(Step.timeNotes)
+        .transition(stepTransition)
+    }
+
+    // MARK: - Fields
 
     private var consistencySection: some View {
         VStack(alignment: .leading, spacing: JP.Spacing.md) {
@@ -90,16 +160,16 @@ struct LogOutputForm: View {
             Stepper("Pain level", value: $pain, in: 0...5)
                 .labelsHidden()
                 .font(JP.Font.body)
-                .accessibilityValue("\(pain) of 5")
-            Toggle("Nighttime episode", isOn: $isNight)
+                .accessibilityValue("\(pain) of 5, \(PainLevel.summary(for: pain))")
+            JPCaption(PainLevel.summary(for: pain))
+            // Bag leakage/an overnight empty and pouch seepage aren't the same thing, so the
+            // label changes rather than reusing "Nighttime episode" for both.
+            Toggle(profile.hasOstomy ? "Bag leakage or overnight empty" : "Nighttime episode", isOn: $isNight)
                 .toggleStyle(.jpCheckbox)
         }
         .jpCard()
     }
 
-    // Collapsed by default so the common case stays a two-tap save. Catching up on a missed
-    // day matters: a day with nothing logged is a gap, and the pattern flags deliberately
-    // break their streaks across gaps rather than guess.
     private var timeSection: some View {
         VStack(alignment: .leading, spacing: JP.Spacing.md) {
             JPCardHeader(title: "Time", icon: "clock")
@@ -140,13 +210,39 @@ struct LogOutputForm: View {
         .jpCard()
     }
 
+    // MARK: - Navigation
+
+    private var stepTransition: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: goingBack ? .leading : .trailing).combined(with: .opacity),
+            removal: .move(edge: goingBack ? .trailing : .leading).combined(with: .opacity)
+        )
+    }
+
+    private func advance() {
+        guard let next = Step(rawValue: step.rawValue + 1) else {
+            save()
+            return
+        }
+        goingBack = false
+        withAnimation(.easeInOut(duration: 0.25)) { step = next }
+    }
+
+    private func goBack() {
+        guard let previous = Step(rawValue: step.rawValue - 1) else { return }
+        goingBack = true
+        withAnimation(.easeInOut(duration: 0.25)) { step = previous }
+    }
+
     private func save() {
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         let entry = OutputEntry(
             timestamp: backdatedTo ?? .now,
             consistency: consistency,
-            hasUrgency: hasUrgency,
-            urgencySeverity: hasUrgency ? urgencySeverity : 0,
+            // Ostomy users never see the urgency question, so nothing is asked-and-discarded —
+            // it's simply never set.
+            hasUrgency: profile.hasOstomy ? false : hasUrgency,
+            urgencySeverity: (profile.hasOstomy || !hasUrgency) ? 0 : urgencySeverity,
             blood: blood,
             pain: pain,
             isNight: isNight,
@@ -154,13 +250,15 @@ struct LogOutputForm: View {
         )
         modelContext.insert(entry)
 
-        notes = ""
-        backdatedTo = nil
-
         withAnimation { didSave = true }
         Task {
-            try? await Task.sleep(for: .seconds(1.2))
-            withAnimation { didSave = false }
+            try? await Task.sleep(for: .seconds(1.0))
+            dismiss()
         }
     }
+}
+
+#Preview {
+    LogOutputWizard(profile: UserProfile())
+        .modelContainer(for: OutputEntry.self, inMemory: true)
 }

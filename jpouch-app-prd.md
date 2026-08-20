@@ -59,10 +59,10 @@ People who undergo j-pouch (ileoanal pouch) surgery go through a distinct, multi
 - App's default tracking prompts and home screen adapt to stage (e.g., adaptation-phase users see hydration prominently; long-term users see pouchitis pattern status).
 - Acceptance: given a user in "adaptation" stage, when they open the app, then hydration and output logging are the primary actions — not buried in a menu.
 
-**Fast output/symptom logging**
-- Single-screen log: time, consistency (Bristol-style scale adapted for pouch output), urgency (yes/no + severity), blood (none/streaks/significant), pain (0–5), day or night.
-- Must complete in under 30 seconds / 4 taps for a basic entry.
-- Acceptance: a user can log a basic entry (no notes) in 4 taps or fewer.
+**Guided output/symptom logging**
+- Step-by-step log, not a single screen: consistency + blood, then urgency + pain, then time + notes — each step a `.jpCard()` group, with Back available at every step but Save only reachable at the end.
+- Fields: time, consistency (Bristol-style scale adapted for pouch output), urgency (yes/no + severity), blood (none/streaks/significant), pain (0–5, now with a plain-language description per level), day or night.
+- Superseded the earlier "single-screen, 4 taps, under 30 seconds" requirement: a deliberate tradeoff of speed for clarity per-field, made explicitly rather than left unquantified. There is no longer a fixed tap-count/time acceptance criterion for a basic entry — see Success Metrics below, which should be revisited if step count meaningfully hurts completion rates in practice.
 
 **Hydration tracking with HealthKit sync**
 - Log water/fluid intake and electrolyte drink use.
@@ -135,7 +135,7 @@ The current four-stage model (pre-op / staged surgery / adaptation / long-term m
 
 **Leading indicators**
 - Day-7 retention of new users who complete onboarding (target: 40%+ — chronic-condition trackers typically retain worse than this without a strong "why keep opening it," so this is the number to watch first).
-- % of logged entries completed in under 30 seconds (target: 80%+) — validates the speed requirement is actually met, not just designed for.
+- % of logged entries completed without abandoning the wizard partway through (target: 80%+) — now that output/hydration logging is step-by-step rather than single-screen, completion-without-abandonment is the metric that matters; a prior 30-second/4-tap target no longer applies (see Fast/Guided output logging above).
 - Free-to-paid conversion rate at 30 days (target: 3–5%, in line with niche health-app freemium benchmarks).
 
 **Lagging indicators**
