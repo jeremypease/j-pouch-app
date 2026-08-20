@@ -105,10 +105,11 @@ struct SettingsView: View {
                     if profile.manualStageOverride == nil {
                         LabeledContent("Computed stage", value: profile.stage.displayName)
                     }
+                    Toggle("Currently have an ostomy", isOn: $profile.hasOstomy)
                 } header: {
                     Text("Stage")
                 } footer: {
-                    Text("Automatic moves you through stages on its own using the dates below. Pick a stage directly to override it.")
+                    Text("Automatic moves you through stages on its own using the dates below. Pick a stage directly to override it. The ostomy toggle changes a couple of questions in Output logging that only make sense for a pouch.")
                 }
                 Section {
                     Toggle("Staged surgery date known", isOn: Binding(
