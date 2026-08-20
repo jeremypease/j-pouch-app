@@ -40,8 +40,10 @@ struct JPouchWidgetProvider: TimelineProvider {
 struct JPouchWidgetView: View {
     var entry: JPouchWidgetProvider.Entry
 
-    private let presetAmountsML = [125, 250, 500]
-
+    // DIAGNOSTIC: interactive Button(intent:) rows temporarily removed to isolate whether
+    // AppIntents integration is what's causing CI's Simulator-install failure
+    // ("extensionDictionary must be set in placeholder attributes"). Restore the buttons
+    // (see git history / PR #7) once that's confirmed one way or the other.
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Hydration today")
@@ -49,22 +51,6 @@ struct JPouchWidgetView: View {
                 .foregroundStyle(.secondary)
             Text("\(entry.todayHydrationML) / \(entry.hydrationTargetML) mL")
                 .font(.headline)
-
-            HStack(spacing: 6) {
-                ForEach(presetAmountsML, id: \.self) { amount in
-                    Button(intent: LogWaterIntent(volumeML: amount)) {
-                        Text("+\(amount)")
-                            .font(.caption2)
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
-
-            Button(intent: LogLastOutputIntent()) {
-                Text("Log last output")
-                    .font(.caption2)
-            }
-            .buttonStyle(.bordered)
         }
         .padding()
         .containerBackground(.background, for: .widget)
