@@ -24,7 +24,6 @@ struct JPouchWidgetProvider: TimelineProvider {
         completion(Timeline(entries: [currentEntry()], policy: .never))
     }
 
-    @MainActor
     private func currentEntry() -> JPouchWidgetEntry {
         let context = ModelContext(PersistenceSetup.shared.container)
         let startOfDay = Calendar.current.startOfDay(for: .now)
