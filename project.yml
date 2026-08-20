@@ -133,10 +133,10 @@ targets:
         excludes:
           - "GIReport.swift"
       - path: JPouch/Services/PersistenceSetup.swift
-    entitlements:
-      path: JPouchWidget/JPouchWidget.entitlements
-      properties:
-        com.apple.security.application-groups: [group.com.jeremypease.jpouch]
+    # DIAGNOSTIC: entitlements block temporarily removed entirely to test whether the App Group
+    # capability is what's tripping CoreSimulator's extension-placeholder install (still failing
+    # identically after ruling out widget content and the Info.plist generation mechanism — see
+    # PR #7 / plan "Follow-up 2"). Restore once this narrows it down.
     info:
       path: JPouchWidget/Info.plist
     settings:
