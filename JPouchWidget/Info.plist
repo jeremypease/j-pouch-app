@@ -16,10 +16,17 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>XPC!</string>
+	<!-- Literal, not $(MARKETING_VERSION)/$(CURRENT_PROJECT_VERSION): an app extension's
+	     CFBundleVersion/CFBundleShortVersionString left as unresolved build-variable
+	     substitutions makes the Simulator's extension-placeholder install fail with
+	     "extensionDictionary must be set in placeholder attributes" — a documented
+	     Simulator quirk specific to extension Info.plists, not the host app's. Unlike
+	     JPouch/Resources/Info.plist, this target has no git-commit-count build-number
+	     postBuildScript depending on the substitution, so a literal value is fine. -->
 	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
+	<string>0.1.0</string>
 	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<string>1</string>
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionPointIdentifier</key>
