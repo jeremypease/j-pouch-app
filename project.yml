@@ -150,6 +150,13 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: S6M9LCA6DC
         SKIP_INSTALL: YES
+        # DIAGNOSTIC: try Xcode's own widget-extension template combination
+        # (GENERATE_INFOPLIST_FILE + INFOPLIST_FILE merge, INFOPLIST_KEY_* for flat keys) instead
+        # of relying on `info: path:` alone, to see whether that's what CoreSimulator's
+        # extension-placeholder creation wants — CI has failed identically without this. See
+        # PR #7 / plan "Follow-up 2".
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: J-Pouch
 schemes:
   JPouch:
     build:
